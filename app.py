@@ -5,7 +5,6 @@ import re
 import sys
 import time
 from html.parser import HTMLParser
-
 import requests
 
 # ------------------------------------------------------------------
