@@ -3,7 +3,7 @@ import streamlit as st
 from groq import Groq
 
 # Sayfa Ayarları
-st.set_page_config(page_title="Kanka AI Pro (Groq)", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
 # Tasarım ve Renk Düzeltmeleri (CSS)
 st.markdown("""
@@ -42,9 +42,9 @@ st.markdown("""
         font-weight: bold; 
     }
     .stButton>button:hover { 
-        background-color: #3b82f6 !important; 
-        color: #ffffff !important; 
-        border-color: #3b82f6 !important; 
+        background-color: #eab308 !important; 
+        color: #000000 !important; 
+        border-color: #eab308 !important; 
     }
 
     /* Mesaj Giriş Kutusu (Chat Input) */
@@ -55,10 +55,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 Kanka AI - Işık Hızında Yapay Zeka")
+st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq & Llama 3 Altyapısı ile Güçlendirildi 🚀")
 
-# Groq API Bağlantısı (Düzeltilen Satır)
+# Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 
 if api_key:
@@ -68,7 +68,7 @@ else:
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben süper hızlı yapay zeka asistanınım. Ne konuşmak istersin?"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Süper hızlı ve zeki asistanınım. Bugün ne yapmak istersin?"}
     ]
 
 # Hızlı Butonlar
@@ -92,20 +92,20 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Kullanıcı Girdisi
-prompt = st.chat_input("Bir şeyler yaz kanka...") or hizli_mesaj
+prompt = st.chat_input("Şimşek Zeka'ya bir şeyler sor kanka...") or hizli_mesaj
 
 if prompt:
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("assistant"):
-        with st.spinner("Düşünüyorum kanka... 🧠"):
+        with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
             if client:
                 try:
                     response = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=[
-                            {"role": "system", "content": "Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki ve yardımsever bir yapay zeka asistanısın."},
+                            {"role": "system", "content": "Senin adın Şimşek Zeka. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."},
                             *st.session_state.messages
                         ],
                     )
