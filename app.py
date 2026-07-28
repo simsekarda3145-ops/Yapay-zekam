@@ -1,107 +1,94 @@
-import json
-import os
-import random
-import re
-import requests
-from html.parser import HTMLParser
 import streamlit as st
+from google import genai
 
-# Sayfa Ayarları
-st.set_page_config(page_title="Kanka AI", page_icon="🤖", layout="centered")
+# Sayfa Konfigürasyonu (Koyu Tema ve Başlık)
+st.set_page_config(
+    page_title="Kanka AI Pro",
+    page_icon="🤖",
+    layout="centered"
+)
 
-# Streamlit Sohbet Geçmişi Hafızası
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "baglam" not in st.session_state:
-    st.session_state.baglam = {
-        "isim": None,
-        "son_kategori": None,
-        "son_cevap": None,
-        "tarih_modu": False,
-        "tarih_indeks": 0,
+# Özel CSS ile Tasarımı Şıklaştırma
+st.markdown("""
+    <style>
+    .main {
+        background-color: #0e1117;
     }
+    .stButton>button {
+        width: 100%;
+        border-radius: 12px;
+        height: 3em;
+        background-color: #262730;
+        color: #ffffff;
+        border: 1px solid #4f535a;
+        font-weight: bold;
+    }
+    .stButton>button:hover {
+        background-color: #ff4b4b;
+        color: white;
+        border-color: #ff4b4b;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# ------------------------------------------------------------------
-# Cevap Havuzu ve Mantık
-# ------------------------------------------------------------------
-bot_hafizasi = {
-    "selamlaşma": ["Ooo selam kanka, hoş geldin!", "Merhaba kanka, naber?", "Yaa kanka hoş geldin!"],
-    "hal_hatir": ["Bomba gibiyim kanka, seni sormalı?", "İyiyim be kanka, yuvarlanıp gidiyoruz. Sende ne var ne yok?"],
-    "hal_hatir_devam_iyi": ["Süper kanka, bugün ne yapıyorsun bakalım?", "Güzel be kanka, enerjin yerinde!"],
-    "hal_hatir_devam_kotu": ["Hadi kanka geçmiş olsun, ne oldu ki?", "Üzülme kanka, anlatırsan rahatlarsın."],
-    "anakart_donanim": ["Donanım işleri bizden sorulur kanka! IPX41-D3 falan derken profesör olduk.", "Ooo sistem mi topluyoruz kanka?"],
-    "spor": ["Yaa maçı kaçırdım kanka, kim kazandı?", "Spor muhabbeti güzeldir kanka!"],
-    "oyun": ["Kanka hangi oyunu oynuyorsun şu aralar?", "Oyun muhabbeti açılmışken, en sevdiğin oyun ne?"],
-    "film": ["Kanka son izlediğin film neydi?", "Dizi önerisi lazımsa bana sor kanka!"],
-    "ovgu": ["Kralsın kanka!", "Sen bu işi çözmüşsün valla kanka."],
-    "bilmiyorum": ["Valla kanka orasını tam anlayamadım, biraz daha açsana?", "Kafam karıştı kanka, başka bir şey konuşalım mı?"],
-}
+st.title("🤖 Kanka AI - Süper Akıllı Asistan")
+st.caption("Google Gemini Yapay Zeka Beyni ile Güçlendirildi 🚀")
 
-kategori_kelimeleri = [
-    ("selamlaşma", ["selam", "merhaba", "sa", "sea", "hey", "hello"]),
-    ("hal_hatir", ["nasılsın", "naber", "ne haber", "nasıl gidiyor", "napıyorsun"]),
-    ("anakart_donanim", ["anakart", "ram", "fps", "valorant", "ekran kartı", "pc", "bilgisayar"]),
-    ("spor", ["fenerbahçe", "galatasaray", "beşiktaş", "maç", "gol", "futbol"]),
-    ("oyun", ["oyun", "steam", "ps5", "xbox", "minecraft", "fortnite", "lol"]),
-    ("film", ["film", "dizi", "netflix", "sinema"]),
-    ("ovgu", ["iyi", "sağol", "teşekkür", "kralsın", "cansın", "eyvallah"]),
-]
+# Gemini API İstemcisi
+# Not: Tam performans için Streamlit Secrets'a 'GEMINI_API_KEY' ekleyebilirsin.
+try:
+    client = genai.Client()
+except Exception:
+    client = None
 
-def matematik_islemi_yap(girdi):
-    temiz = girdi.replace("topla", "+").replace("çıkar", "-").replace("çarp", "*").replace("böl", "/").replace("?", "")
-    karakterler = [c for c in temiz if c in "0123456789+-*/. "]
-    islem = "".join(karakterler).strip()
-    if islem and re.fullmatch(r"[0-9.\s]+([+\-*/][0-9.\s]+)+", islem):
-        try:
-            return f"Kanka hesapladım, o işlemin sonucu: {eval(islem)} yapıyor! 🧠⚡"
-        except ZeroDivisionError:
-            return "Kanka sıfıra bölünmez ki! 😅"
-    return None
+# Sohbet Geçmişi
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Naber kanka! Ben senin süper akıllı yapay zeka asistanınım. Ne sormak istersin?"}
+    ]
 
-def isim_tespit_et(girdi):
-    desen = re.search(r"\b(?:ismim|adım)\s+([a-zA-ZğüşıöçĞÜŞİÖÇ]+)", girdi)
-    return desen.group(1).capitalize() if desen else None
+# Hızlı Sorular / Butonlar
+st.write("💡 **Hızlı İpuçları:**")
+col1, col2, col3 = st.columns(3)
 
-def cevap_uret(girdi, baglam):
-    girdi_alt = girdi.lower()
-    
-    isim = isim_tespit_et(girdi_alt)
-    if isim:
-        baglam["isim"] = isim
-        return f"Tanıştığıma sevindim {isim} kanka, artık seni hatırlıyorum!"
+hizli_mesaj = None
+with col1:
+    if st.button("🎭 Fıkra Anlat"):
+        hizli_mesaj = "Bana komik, kısa bir fıkra anlat kanka!"
+with col2:
+    if st.button("🎮 Oyun Önerisi"):
+        hizli_mesaj = "Şu an oynayabileceğimi düşündüğün harika bir PC/Konsol oyunu önerir misin?"
+with col3:
+    if st.button("🧠 İLGİNÇ BİLGİ"):
+        hizli_mesaj = "Beni şaşırtacak çok ilginç ve az bilinen bir bilgi ver kanka!"
 
-    mat_sonuc = matematik_islemi_yap(girdi_alt)
-    if mat_sonuc:
-        return mat_sonuc
-
-    for kat, kelimeler in kategori_kelimeleri:
-        if any(k in girdi_alt for k in kelimeler):
-            return random.choice(bot_hafizasi[kat])
-
-    return random.choice(bot_hafizasi["bilmiyorum"])
-
-# ------------------------------------------------------------------
-# ARAYÜZ (Streamlit Frontend)
-# ------------------------------------------------------------------
-st.title("🤖 Kanka AI Chatbot")
-st.write("Sana özel yapay zekan hazır kanka! İstediğini sorabilirsin.")
-
-# Eski mesajları ekranda göster
+# Eski Mesajları Listele
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Kullanıcıdan mesaj al
-if prompt := st.chat_input("Bir şeyler yaz kanka..."):
-    # Kullanıcı mesajını ekrana bas ve hafızaya ekle
+# Kullanıcı Girdisi (Arama kutusu veya Buton tıklaması)
+prompt = st.chat_input("Bir şeyler yaz kanka...") or hizli_mesaj
+
+if prompt:
+    # Kullanıcı mesajını ekrana ekle
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Bot cevabını üret
-    cevap = cevap_uret(prompt, st.session_state.baglam)
-
-    # Bot cevabını ekrana bas ve hafızaya ekle
+    # Yapay Zeka Cevabı Üret
     with st.chat_message("assistant"):
-        st.markdown(cevap)
-    st.session_state.messages.append({"role": "assistant", "content": cevap})
+        with st.spinner("Düşünüyorum kanka... 🧠"):
+            if client:
+                try:
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=f"Sen samimi, eğlenceli ve 'kanka' diye hitap eden bir yapay zeka asistanısın. Kullanıcının sorusu: {prompt}",
+                    )
+                    cevap = response.text
+                except Exception as e:
+                    cevap = f"Ufak bir aksilik oldu kanka: {e}"
+            else:
+                cevap = "Kanka Gemini API anahtarın henüz tanımlı değil. Streamlit Cloud ayarlarından GEMINI_API_KEY ekleyince gerçek yapay zeka beyni devreye girecek!"
+
+            st.markdown(cevap)
+            st.session_state.messages.append({"role": "assistant", "content": cevap})
