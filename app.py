@@ -59,4 +59,4 @@ st.title("🤖 Kanka AI - Işık Hızında Yapay Zeka")
 st.caption("Groq & Llama 3 Altyapısı ile Güçlendirildi 🚀")
 
 # Groq API Bağlantısı
-api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY
+api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
