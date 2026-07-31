@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 import streamlit as st
 from groq import Groq
 
@@ -56,7 +57,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Groq & Llama 3 Altyapısı ile Güçlendirildi 🚀")
+st.caption("Groq & Pollinations AI Altyapısı ile Güçlendirildi 🚀")
+
+# Görsel Üretim Fonksiyonu
+def gorsel_olustur(prompt_text):
+    encoded_text = urllib.parse.quote(prompt_text)
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true"
+    return image_url
 
 # Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
@@ -68,7 +75,7 @@ else:
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Süper hızlı ve zeki asistanınım. Bugün ne yapmak istersin?"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sohbet edebilir, sorularını yanıtlayabilir ya da 'Uzayda kedi çiz' dersen sana özel resim çizebilirim!"}
     ]
 
 # Hızlı Butonlar
@@ -80,8 +87,8 @@ with col1:
     if st.button("🎭 Fıkra Anlat"):
         hizli_mesaj = "Bana komik, kısa bir fıkra anlat kanka!"
 with col2:
-    if st.button("🎮 Oyun Öner"):
-        hizli_mesaj = "Şu an oynayabileceğim harika bir PC/Konsol oyunu önerir misin?"
+    if st.button("🎨 Resim Çizdir"):
+        hizli_mesaj = "Siberpunk şehirde uçan kırmızı bir araba çiz"
 with col3:
     if st.button("🧠 İlginç Bilgi"):
         hizli_mesaj = "Beni şaşırtacak çok ilginç ve az bilinen bir bilgi ver kanka!"
@@ -89,31 +96,53 @@ with col3:
 # Eski Mesajları Göster
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        if message.get("type") == "image":
+            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
+        else:
+            st.markdown(message["content"])
 
 # Kullanıcı Girdisi
-prompt = st.chat_input("Şimşek Zeka'ya bir şeyler sor kanka...") or hizli_mesaj
+prompt = st.chat_input("Soru sor veya '...çiz' de...") or hizli_mesaj
 
 if prompt:
+    # Kullanıcının mesajını ekrana bas ve hafızaya al
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.chat_message("assistant"):
-        with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
-            if client:
-                try:
-                    response = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {"role": "system", "content": "Senin adın Şimşek Zeka. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."},
-                            *st.session_state.messages
-                        ],
-                    )
-                    cevap = response.choices[0].message.content
-                except Exception as e:
-                    cevap = f"Ufak bir aksilik oldu kanka: {e}"
-            else:
-                cevap = "Kanka Groq API key henüz eklenmemiş. Secrets kısmına 'GROQ_API_KEY' ekleyince zekam tam devreye girecek!"
+    prompt_lower = prompt.lower()
+    
+    # Görsel İsteği mi Kontrol Et
+    gorsel_kelimeleri = ["çiz", "resim", "görsel", "fotoğrafı", "tasarla", "draw", "picture"]
+    is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
-            st.markdown(cevap)
-            st.session_state.messages.append({"role": "assistant", "content": cevap})
+    with st.chat_message("assistant"):
+        if is_image_request:
+            with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
+                resim_linki = gorsel_olustur(prompt)
+                st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
+                st.session_state.messages.append({"role": "assistant", "content": resim_linki, "type": "image"})
+        else:
+            with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
+                if client:
+                    try:
+                        # Görsel olmayan normal mesaj geçmişini API'ye gönder
+                        temiz_gecmis = [
+                            {"role": m["role"], "content": m["content"]} 
+                            for m in st.session_state.messages if m.get("type") != "image"
+                        ]
+                        
+                        response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=[
+                                {"role": "system", "content": "Senin adın Şimşek Zeka. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."},
+                                *temiz_gecmis
+                            ],
+                        )
+                        cevap = response.choices[0].message.content
+                    except Exception as e:
+                        cevap = f"Ufak bir aksilik oldu kanka: {e}"
+                else:
+                    cevap = "Kanka Groq API key henüz eklenmemiş. Secrets kısmına 'GROQ_API_KEY' ekleyince zekam tam devreye girecek!"
+
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
