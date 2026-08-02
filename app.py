@@ -1,12 +1,16 @@
 import streamlit as st
 from PIL import Image
 
-st.set_page_config(page_title="Yapay Zeka Asistanı", page_icon="🤖")
+st.set_page_config(page_title="Şimşek Zeka", page_icon="⚡")
 
-# Sohbet geçmişini başlat (Hata burada düzeltildi: st.session_state kullanıldı)
+# === EKRANIN EN ÜSTÜNDEKİ YAZI VE İSİM ===
+st.title("⚡ Şimşek Zeka")
+st.subheader("Anında Cevap!")
+
+# Sohbet geçmişini başlat
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben süper hızlı yapay zeka asistanınım. Ne konuşmak istersin?"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka. Ne konuşmak istersin?"}
     ]
 
 # Ekranın üstündeki hızlı butonlar
