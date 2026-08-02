@@ -1,3 +1,4 @@
+if "pekmez" in user_prompt.lower():
 import streamlit as st
 from PIL import Image
 
