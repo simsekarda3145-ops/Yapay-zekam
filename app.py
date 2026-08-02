@@ -2,6 +2,7 @@ import os
 import urllib.parse
 import streamlit as st
 from groq import Groq
+from PIL import Image
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -116,18 +117,31 @@ if prompt:
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        if is_image_request:
+        # 1. ÖZEL KONTROL: Pekmez yazıldıysa yüklenen görseli göster
+        if "pekmez" in prompt_lower:
+            try:
+                img = Image.open("pekmez.jpg")
+                st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
+                st.session_state.messages.append({"role": "assistant", "content": "pekmez.jpg", "type": "image"})
+            except FileNotFoundError:
+                hata_msg = "Kanka 'pekmez.jpg' dosyasını GitHub'a yüklediğinden emin ol, dosya bulunamadı!"
+                st.error(hata_msg)
+                st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
+
+        # 2. YAPAY ZEKA İLE RESİM ÇİZME (Görsel Kelimesi Geçiyorsa)
+        elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 resim_linki = gorsel_olustur(prompt)
                 st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
                 st.session_state.messages.append({"role": "assistant", "content": resim_linki, "type": "image"})
+                
+        # 3. NORMAL SOHBET (Groq API Cevabı)
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
                     try:
-                        # Görsel olmayan normal mesaj geçmişini API'ye gönder
                         temiz_gecmis = [
-                            {"role": m["role"], "content": m["content"]} 
+                            {"role": m["role"], "content": str(m["content"])} 
                             for m in st.session_state.messages if m.get("type") != "image"
                         ]
                         
