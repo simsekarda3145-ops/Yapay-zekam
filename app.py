@@ -120,11 +120,12 @@ if prompt:
         # 1. ÖZEL KONTROL: Pekmez yazıldıysa yüklenen görseli göster
         if "pekmez" in prompt_lower:
             try:
-                img = Image.open("pekmez.jpg")
+                # GitHub'daki tam dosya adı buraya yazıldı:
+                img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
                 st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
                 st.session_state.messages.append({"role": "assistant", "content": "pekmez.jpg", "type": "image"})
             except FileNotFoundError:
-                hata_msg = "Kanka 'pekmez.jpg' dosyasını GitHub'a yüklediğinden emin ol, dosya bulunamadı!"
+                hata_msg = "Kanka dosya bulunamadı, GitHub ana dizininde olduğundan emin ol!"
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
