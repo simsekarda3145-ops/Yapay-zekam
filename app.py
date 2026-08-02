@@ -120,7 +120,6 @@ if prompt:
         # 1. ÖZEL KONTROL: Pekmez yazıldıysa yüklenen görseli göster
         if "pekmez" in prompt_lower:
             try:
-                # GitHub'daki tam dosya adı buraya yazıldı:
                 img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
                 st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
                 st.session_state.messages.append({"role": "assistant", "content": "pekmez.jpg", "type": "image"})
@@ -149,7 +148,10 @@ if prompt:
                         response = client.chat.completions.create(
                             model="llama-3.3-70b-versatile",
                             messages=[
-                                {"role": "system", "content": "Senin adın Şimşek Zeka. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."},
+                                {
+                                    "role": "system", 
+                                    "content": "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi ve oluşturdu. Seni kim yaptı, kim tasarladı, geliştiricin kim gibi sorular sorulduğunda gururla seni Arda Şimşek'in yaptığını söyle. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."
+                                },
                                 *temiz_gecmis
                             ],
                         )
