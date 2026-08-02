@@ -2,20 +2,11 @@ import streamlit as st
 from PIL import Image
 import requests
 import io
+import urllib.parse
 
-st.title("Yapay Zeka Görsel Oluşturucu")
+st.set_page_config(page_title="AI Görsel Oluşturucu", page_icon="🎨")
 
-# Hugging Face ücretsiz görsel üretme API adresi
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1"
-
-def ai_resim_ureti(prompt):
-    payload = {"inputs": prompt}
-    response = requests.post(API_URL, json=payload)
-    if response.status_code == 200:
-        image_bytes = response.content
-        return Image.open(io.BytesIO(image_bytes))
-    else:
-        return None
+st.title("🎨 Yapay Zeka Görsel Oluşturucu")
 
 user_prompt = st.text_input("Ne çizmek istersin?", "")
 
@@ -29,11 +20,19 @@ if st.button("Görsel Oluştur"):
             except FileNotFoundError:
                 st.error("pekmez.jpg dosyası bulunamadı! Lütfen GitHub'a bu isimle resmi yükleyin.")
         
-        # KONTROL 2: Başka Bir Şey Yazıldıysa Yapay Zekaya Çizdir
+        # KONTROL 2: Başka Bir Şey Yazıldıysa Yapay Zekaya Çizdir (Pollinations AI)
         else:
-            with st.spinner("Yapay zeka görseli çiziyor, lütfen bekle..."):
-                ai_image = ai_resim_ureti(user_prompt)
-                if ai_image:
-                    st.image(ai_image, caption=f"Çizilen: {user_prompt}")
-                else:
-                    st.error("Yapay zeka şu an yoğun, lütfen birkaç saniye sonra tekrar dene!")
+            with st.spinner("Yapay zeka görseli çiziyor..."):
+                try:
+                    # Metni URL formatına çevirip hızlı yapay zeka servisine gönderiyoruz
+                    encoded_prompt = urllib.parse.quote(user_prompt)
+                    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
+                    
+                    response = requests.get(image_url)
+                    if response.status_code == 200:
+                        ai_image = Image.open(io.BytesIO(response.content))
+                        st.image(ai_image, caption=f"Yapay Zeka Çizimi: {user_prompt}")
+                    else:
+                        st.error("Görsel oluşturulamadı, lütfen tekrar dene.")
+                except Exception as e:
+                    st.error("Bir hata oluştu, lütfen tekrar dene.")
