@@ -3,6 +3,8 @@ import urllib.parse
 import streamlit as st
 from groq import Groq
 from PIL import Image
+from gtts import gTTS
+import base64
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -60,6 +62,19 @@ st.markdown("""
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq & Pollinations AI Altyapısı ile Güçlendirildi 🚀")
 
+# Ses Oluşturma Fonksiyonu (Metni Sese Çevirir)
+def metni_sese_cevir(text):
+    try:
+        tts = gTTS(text=text, lang='tr')
+        tts.save("response.mp3")
+        with open("response.mp3", "rb") as f:
+            audio_bytes = f.read()
+        b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
+        audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64_audio}">'
+        return audio_html
+    except Exception as e:
+        return None
+
 # Görsel Üretim Fonksiyonu
 def gorsel_olustur(prompt_text):
     encoded_text = urllib.parse.quote(prompt_text)
@@ -78,6 +93,9 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sohbet edebilir, sorularını yanıtlayabilir ya da 'Uzayda kedi çiz' dersen sana özel resim çizebilirim!"}
     ]
+
+# Sesli Oynatma Modu Seçeneği
+sesli_cevap_aktif = st.checkbox("🔊 Sesli Cevap Verilsin mi?", value=False)
 
 # Hızlı Butonlar
 st.write("💡 **Hızlı İpuçları:**")
@@ -163,3 +181,9 @@ if prompt:
 
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+
+                # Sesli yanıt açıksa sese çevirip çal
+                if sesli_cevap_aktif and cevap:
+                    audio_html = metni_sese_cevir(cevap)
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
