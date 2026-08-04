@@ -75,10 +75,10 @@ def metni_sese_cevir(text):
     except Exception as e:
         return None
 
-# Görsel Üretim Fonksiyonu
+# Görsel Üretim Fonksiyonu (Resim Yükleme Hatası Düzeltildi)
 def gorsel_olustur(prompt_text):
     encoded_text = urllib.parse.quote(prompt_text)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true"
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true&seed=42"
     return image_url
 
 # Groq API Bağlantısı
@@ -116,7 +116,10 @@ with col3:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
-            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
+            try:
+                st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
+            except Exception:
+                st.write(f"🎨 [Resmi Açmak İçin Tıkla]({message['content']})")
         else:
             st.markdown(message["content"])
 
@@ -150,7 +153,10 @@ if prompt:
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 resim_linki = gorsel_olustur(prompt)
-                st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
+                try:
+                    st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
+                except Exception:
+                    st.write(f"🎨 Resmin hazır kanka! Görmek için tıkla: [Resmi Aç]({resim_linki})")
                 st.session_state.messages.append({"role": "assistant", "content": resim_linki, "type": "image"})
                 
         # 3. NORMAL SOHBET (Groq API Cevabı)
