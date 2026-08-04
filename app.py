@@ -5,6 +5,7 @@ from groq import Groq
 from PIL import Image
 from gtts import gTTS
 import base64
+import requests
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -60,7 +61,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Groq & Pollinations AI Altyapısı ile Güçlendirildi 🚀")
+st.caption("Groq Altyapısı ile Güçlendirildi 🚀")
 
 # Ses Oluşturma Fonksiyonu (Metni Sese Çevirir)
 def metni_sese_cevir(text):
@@ -72,22 +73,18 @@ def metni_sese_cevir(text):
         b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
         audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64_audio}">'
         return audio_html
-    except Exception as e:
+    except Exception:
         return None
 
-# Görsel Üretim Fonksiyonu (Resim Yükleme Hatası Düzeltildi)
+# Güncellenmiş Resim Üretme Fonksiyonu
 def gorsel_olustur(prompt_text):
     encoded_text = urllib.parse.quote(prompt_text)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true&seed=42"
-    return image_url
+    # Yeni ve kesintisiz görsel adresi
+    return f"https://gen.pollinations.ai/image/{encoded_text}?model=flux"
 
 # Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
-
-if api_key:
-    client = Groq(api_key=api_key)
-else:
-    client = None
+client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -116,10 +113,7 @@ with col3:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
-            try:
-                st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
-            except Exception:
-                st.write(f"🎨 [Resmi Açmak İçin Tıkla]({message['content']})")
+            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
         else:
             st.markdown(message["content"])
 
@@ -127,18 +121,15 @@ for message in st.session_state.messages:
 prompt = st.chat_input("Soru sor veya '...çiz' de...") or hizli_mesaj
 
 if prompt:
-    # Kullanıcının mesajını ekrana bas ve hafızaya al
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     prompt_lower = prompt.lower()
-    
-    # Görsel İsteği mi Kontrol Et
     gorsel_kelimeleri = ["çiz", "resim", "görsel", "fotoğrafı", "tasarla", "draw", "picture"]
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. ÖZEL KONTROL: Pekmez yazıldıysa yüklenen görseli göster
+        # 1. ÖZEL KONTROL: Pekmez
         if "pekmez" in prompt_lower:
             try:
                 img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
@@ -149,17 +140,14 @@ if prompt:
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-        # 2. YAPAY ZEKA İLE RESİM ÇİZME (Görsel Kelimesi Geçiyorsa)
+        # 2. RESİM ÇİZME
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 resim_linki = gorsel_olustur(prompt)
-                try:
-                    st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
-                except Exception:
-                    st.write(f"🎨 Resmin hazır kanka! Görmek için tıkla: [Resmi Aç]({resim_linki})")
+                st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
                 st.session_state.messages.append({"role": "assistant", "content": resim_linki, "type": "image"})
-                
-        # 3. NORMAL SOHBET (Groq API Cevabı)
+
+        # 3. NORMAL SOHBET
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
@@ -188,7 +176,6 @@ if prompt:
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
-                # Sesli yanıt açıksa sese çevirip çal
                 if sesli_cevap_aktif and cevap:
                     audio_html = metni_sese_cevir(cevap)
                     if audio_html:
