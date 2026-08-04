@@ -6,6 +6,7 @@ from PIL import Image
 from gtts import gTTS
 import base64
 import requests
+from io import BytesIO
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -13,18 +14,13 @@ st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="cent
 # Tasarım ve Renk Düzeltmeleri (CSS)
 st.markdown("""
     <style>
-    /* Ana Sayfa Arka Planı */
     .stApp { 
         background-color: #0e1117 !important; 
         color: #ffffff !important; 
     }
-    
-    /* Genel Yazı Renkleri */
     h1, h2, h3, p, span, label, div {
         color: #ffffff !important;
     }
-
-    /* Sohbet Mesaj Kutuları */
     .stChatMessage {
         background-color: #1a1f2c !important;
         border-radius: 12px;
@@ -35,8 +31,6 @@ st.markdown("""
     .stChatMessage p {
         color: #f0f2f5 !important;
     }
-
-    /* Buton Tasarımları */
     .stButton>button { 
         width: 100%; 
         border-radius: 10px; 
@@ -51,8 +45,6 @@ st.markdown("""
         color: #000000 !important; 
         border-color: #eab308 !important; 
     }
-
-    /* Mesaj Giriş Kutusu (Chat Input) */
     .stChatInputContainer input {
         color: #ffffff !important;
         background-color: #1a1f2c !important;
@@ -63,7 +55,7 @@ st.markdown("""
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq Altyapısı ile Güçlendirildi 🚀")
 
-# Ses Oluşturma Fonksiyonu (Metni Sese Çevirir)
+# Ses Oluşturma Fonksiyonu
 def metni_sese_cevir(text):
     try:
         tts = gTTS(text=text, lang='tr')
@@ -71,16 +63,22 @@ def metni_sese_cevir(text):
         with open("response.mp3", "rb") as f:
             audio_bytes = f.read()
         b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
-        audio_html = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64_audio}">'
-        return audio_html
+        return f'<audio autoplay="true" src="data:audio/mp3;base64,{b64_audio}">'
     except Exception:
         return None
 
-# Güncellenmiş Resim Üretme Fonksiyonu
-def gorsel_olustur(prompt_text):
-    encoded_text = urllib.parse.quote(prompt_text)
-    # Yeni ve kesintisiz görsel adresi
-    return f"https://gen.pollinations.ai/image/{encoded_text}?model=flux"
+# Kesin Çözümlü Görsel İndirme Fonksiyonu
+def gorsel_indir_ve_getir(prompt_text):
+    try:
+        encoded_text = urllib.parse.quote(prompt_text)
+        url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true"
+        # Resmi tarayıcıya bırakmadan sunucu tarafında indiriyoruz
+        response = requests.get(url, timeout=15)
+        if response.status_code == 200:
+            return Image.open(BytesIO(response.content))
+        return None
+    except Exception:
+        return None
 
 # Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
@@ -91,10 +89,8 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sohbet edebilir, sorularını yanıtlayabilir ya da 'Uzayda kedi çiz' dersen sana özel resim çizebilirim!"}
     ]
 
-# Sesli Oynatma Modu Seçeneği
 sesli_cevap_aktif = st.checkbox("🔊 Sesli Cevap Verilsin mi?", value=False)
 
-# Hızlı Butonlar
 st.write("💡 **Hızlı İpuçları:**")
 col1, col2, col3 = st.columns(3)
 hizli_mesaj = None
@@ -109,7 +105,6 @@ with col3:
     if st.button("🧠 İlginç Bilgi"):
         hizli_mesaj = "Beni şaşırtacak çok ilginç ve az bilinen bir bilgi ver kanka!"
 
-# Eski Mesajları Göster
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
@@ -117,7 +112,6 @@ for message in st.session_state.messages:
         else:
             st.markdown(message["content"])
 
-# Kullanıcı Girdisi
 prompt = st.chat_input("Soru sor veya '...çiz' de...") or hizli_mesaj
 
 if prompt:
@@ -129,25 +123,28 @@ if prompt:
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. ÖZEL KONTROL: Pekmez
+        # 1. Pekmez Kontrolü
         if "pekmez" in prompt_lower:
             try:
                 img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
                 st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
-                st.session_state.messages.append({"role": "assistant", "content": "pekmez.jpg", "type": "image"})
+                st.session_state.messages.append({"role": "assistant", "content": img, "type": "image"})
             except FileNotFoundError:
                 hata_msg = "Kanka dosya bulunamadı, GitHub ana dizininde olduğundan emin ol!"
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-        # 2. RESİM ÇİZME
+        # 2. Resim Çizdirme (Sunucuda İndirerek Görüntüleme)
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
-                resim_linki = gorsel_olustur(prompt)
-                st.image(resim_linki, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
-                st.session_state.messages.append({"role": "assistant", "content": resim_linki, "type": "image"})
+                img_data = gorsel_indir_ve_getir(prompt)
+                if img_data:
+                    st.image(img_data, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
+                    st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
+                else:
+                    st.error("Kanka resim servisi şu an yoğun, tekrar denemeyi veya başka bir çizim istemeyi dene!")
 
-        # 3. NORMAL SOHBET
+        # 3. Normal Sohbet
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
