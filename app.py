@@ -7,6 +7,7 @@ from gtts import gTTS
 import base64
 import requests
 from io import BytesIO
+from streamlit_mic_recorder import speech_to_text
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -53,9 +54,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Groq Altyapısı ile Güçlendirildi 🚀")
+st.caption("Groq & Voice AI Altyapısı ile Güçlendirildi 🚀")
 
-# Ses Oluşturma Fonksiyonu
+# Ses Oluşturma Fonksiyonu (Metni Sese Çevirir)
 def metni_sese_cevir(text):
     try:
         tts = gTTS(text=text, lang='tr')
@@ -72,7 +73,6 @@ def gorsel_indir_ve_getir(prompt_text):
     try:
         encoded_text = urllib.parse.quote(prompt_text)
         url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true"
-        # Resmi tarayıcıya bırakmadan sunucu tarafında indiriyoruz
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
             return Image.open(BytesIO(response.content))
@@ -86,11 +86,12 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sohbet edebilir, sorularını yanıtlayabilir ya da 'Uzayda kedi çiz' dersen sana özel resim çizebilirim!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sohbet edebilir, sesli konuşabilir ya da 'Uzayda kedi çiz' dersen sana özel resim çizebilirim!"}
     ]
 
-sesli_cevap_aktif = st.checkbox("🔊 Sesli Cevap Verilsin mi?", value=False)
+sesli_cevap_aktif = st.checkbox("🔊 Sesli Cevap Verilsin mi?", value=True)
 
+# Hızlı Butonlar
 st.write("💡 **Hızlı İpuçları:**")
 col1, col2, col3 = st.columns(3)
 hizli_mesaj = None
@@ -105,6 +106,7 @@ with col3:
     if st.button("🧠 İlginç Bilgi"):
         hizli_mesaj = "Beni şaşırtacak çok ilginç ve az bilinen bir bilgi ver kanka!"
 
+# Eski Mesajları Göster
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
@@ -112,7 +114,18 @@ for message in st.session_state.messages:
         else:
             st.markdown(message["content"])
 
-prompt = st.chat_input("Soru sor veya '...çiz' de...") or hizli_mesaj
+# Mikrofon Butonu (Sesli Konuşma Alanı)
+st.write("🎙️ **Sesli Konuşmak İçin Mikrofona Bas:**")
+sesli_girdi = speech_to_text(
+    language='tr', 
+    start_prompt="🎙️ Konuşmaya Başla (Tıkla)", 
+    stop_prompt="⏹️ Dinlemeyi Durdur", 
+    just_once=True,
+    key='STT'
+)
+
+# Yazılı veya Sesli Girdi Yakalama
+prompt = st.chat_input("Soru sor veya '...çiz' de...") or hizli_mesaj or sesli_girdi
 
 if prompt:
     st.chat_message("user").markdown(prompt)
@@ -144,7 +157,7 @@ if prompt:
                 else:
                     st.error("Kanka resim servisi şu an yoğun, tekrar denemeyi veya başka bir çizim istemeyi dene!")
 
-        # 3. Normal Sohbet
+        # 3. Normal Sohbet & Sesli Yanıt
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
