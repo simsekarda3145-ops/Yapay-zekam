@@ -90,4 +90,12 @@ if "messages" not in st.session_state:
     ]
 
 # Eski Mesajları Göster
-for message in st.session_state
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        if message.get("type") == "image":
+            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
+        else:
+            st.markdown(message["content"])
+
+# --- GEMINI USULÜ '+' MENÜSÜ ---
+ekran_mesaji =
