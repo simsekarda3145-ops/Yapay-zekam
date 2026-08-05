@@ -8,6 +8,7 @@ import base64
 import requests
 from io import BytesIO
 from streamlit_mic_recorder import speech_to_text
+import random # Rastgele sayı için ekledik
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -68,11 +69,14 @@ def metni_sese_cevir(text):
     except Exception:
         return None
 
-# Görsel İndirme Fonksiyonu
+# Geliştirilmiş Görsel İndirme Fonksiyonu (Daha Kararlı)
 def gorsel_indir_ve_getir(prompt_text):
     try:
+        # Her istek için rastgele bir seed (tohum) oluşturarak servisin bloklama ihtimalini düşürüyoruz.
+        seed_num = random.randint(1, 1000000)
         encoded_text = urllib.parse.quote(prompt_text)
-        url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true"
+        # URL'e rastgele tohum numarasını (&seed=...) olarak ekledik
+        url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true&seed={seed_num}"
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
             return Image.open(BytesIO(response.content))
@@ -165,7 +169,7 @@ if prompt:
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-        # 2. Resim Çizdirme
+        # 2. Resim Çizdirme (Yeni Geliştirilmiş Fonksiyonu Kullanıyoruz)
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 img_data = gorsel_indir_ve_getir(prompt)
@@ -173,7 +177,8 @@ if prompt:
                     st.image(img_data, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
                     st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
                 else:
-                    st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
+                    # Hata mesajını biraz daha samimi hale getirdik
+                    st.error("Kanka resim servisi şu an çok yoğun, tıkandı kaldı! 😫 Birkaç saniye sonra tekrar deneyelim.")
 
         # 3. Normal Sohbet
         else:
