@@ -90,45 +90,4 @@ if "messages" not in st.session_state:
     ]
 
 # Eski Mesajları Göster
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        if message.get("type") == "image":
-            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
-        else:
-            st.markdown(message["content"])
-
-# --- GEMINI USULÜ '+' MENÜSÜ ---
-ekran_mesaji = None
-
-col_plus, col_input = st.columns([1, 6])
-
-with col_plus:
-    with st.popover("➕", help="Araçlar ve Özellikler"):
-        st.markdown("### 🛠️ Araçlar")
-        
-        # 1. Sesli Dinleme
-        st.write("🎙️ **Sesli Konuş:**")
-        sesli_girdi = speech_to_text(
-            language='tr', 
-            start_prompt="🎙️ Mikrofona Bas", 
-            stop_prompt="⏹️ Durdur", 
-            just_once=True,
-            key='STT_POP'
-        )
-        if sesli_girdi:
-            ekran_mesaji = sesli_girdi
-            
-        st.divider()
-
-        # 2. Görsel Yükleme / Kamera
-        st.write("📷 **Fotoğraf Yükle:**")
-        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-        if yuklenen_dosya:
-            img = Image.open(yuklenen_dosya)
-            st.image(img, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
-
-        st.divider()
-
-        # 3. Sesli Yanıt Aç/Kapa
-        sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap
+for message in st.session_state
