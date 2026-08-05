@@ -3,3 +3,4 @@ groq
 Pillow
 gTTS
 requests
+streamlit-mic-recorder
