@@ -8,7 +8,7 @@ import base64
 import requests
 from io import BytesIO
 from streamlit_mic_recorder import speech_to_text
-import random # Rastgele sayı için ekledik
+import random
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -55,9 +55,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Groq & Voice AI Altyapısı ile Güçlendirildi 🚀")
+st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
 
-# Ses Oluşturma Fonksiyonu
+# Ses Oluşturma Fonksiyonu (Metinden Sese)
 def metni_sese_cevir(text):
     try:
         tts = gTTS(text=text, lang='tr')
@@ -69,13 +69,11 @@ def metni_sese_cevir(text):
     except Exception:
         return None
 
-# Geliştirilmiş Görsel İndirme Fonksiyonu (Daha Kararlı)
+# Görsel İndirme Fonksiyonu (Resim Çizdirme - Yoğunluk Engelleme Ekli)
 def gorsel_indir_ve_getir(prompt_text):
     try:
-        # Her istek için rastgele bir seed (tohum) oluşturarak servisin bloklama ihtimalini düşürüyoruz.
         seed_num = random.randint(1, 1000000)
         encoded_text = urllib.parse.quote(prompt_text)
-        # URL'e rastgele tohum numarasını (&seed=...) olarak ekledik
         url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true&seed={seed_num}"
         response = requests.get(url, timeout=15)
         if response.status_code == 200:
@@ -84,13 +82,19 @@ def gorsel_indir_ve_getir(prompt_text):
     except Exception:
         return None
 
+# Görseli Base64'e Dönüştürme (Groq Vision Görsel Analizi İçin)
+def resim_to_base64(image_file):
+    buffered = BytesIO()
+    image_file.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
 # Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto yükleyebilir veya sesli konuşabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto yükleyebilir, bana fotoğrafı analiz ettirebilir veya sesli konuşabilirsin!"}
     ]
 
 # Eski Mesajları Göster
@@ -103,6 +107,7 @@ for message in st.session_state.messages:
 
 # --- GEMINI USULÜ '+' MENÜSÜ ---
 ekran_mesaji = None
+yuklenen_gorsel_objesi = None
 
 col_plus, col_input = st.columns([1, 6])
 
@@ -124,13 +129,13 @@ with col_plus:
             
         st.divider()
 
-        # 2. Görsel Yükleme / Kamera
-        st.write("📷 **Fotoğraf Yükle:**")
+        # 2. Görsel Yükleme / Kamera (Fotoğraf Tanıma Özelliği)
+        st.write("📷 **Fotoğraf Analiz Et:**")
         yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
         if yuklenen_dosya:
-            img = Image.open(yuklenen_dosya)
-            st.image(img, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
+            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+            st.success("Görsel yüklendi kanka! Aşağıya sorun varsa yazabilirsin.")
 
         st.divider()
 
@@ -145,21 +150,56 @@ with col_plus:
 
 # Normal Chat Girişi
 with col_input:
-    prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
+    prompt_input = st.chat_input("Şimşek Zeka'ya sor, fotoğraf yükle veya '...çiz' de...")
 
 prompt = prompt_input or ekran_mesaji
 
-if prompt:
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+if prompt or yuklenen_gorsel_objesi:
+    girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
+    
+    st.chat_message("user").markdown(girdi_metni)
+    st.session_state.messages.append({"role": "user", "content": girdi_metni})
 
-    prompt_lower = prompt.lower()
+    prompt_lower = girdi_metni.lower()
     gorsel_kelimeleri = ["çiz", "resim", "görsel", "fotoğrafı", "tasarla", "draw", "picture"]
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. Pekmez Kontrolü (Yazınca Otomatik Çalışır)
-        if "pekmez" in prompt_lower:
+        # 1. FOTOĞRAF ANALİZ ETME (GROQ VISION MODELİ)
+        if yuklenen_gorsel_objesi is not None:
+            with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
+                if client:
+                    try:
+                        base64_image = resim_to_base64(yuklenen_gorsel_objesi)
+                        
+                        response = client.chat.completions.create(
+                            model="llama-3.2-11b-vision-preview",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": f"Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et. Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:image/jpeg;base64,{base64_image}",
+                                            },
+                                        },
+                                    ],
+                                }
+                            ],
+                        )
+                        cevap = response.choices[0].message.content
+                    except Exception as e:
+                        cevap = f"Görseli incelerken bir sorun oluştu kanka: {e}"
+                else:
+                    cevap = "Kanka Groq API key eksik olduğu için fotoğrafı okuyamıyorum!"
+
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+
+        # 2. Pekmez Kontrolü (Sohbetten 'pekmez' yazınca tetiklenir)
+        elif "pekmez" in prompt_lower:
             try:
                 img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
                 st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
@@ -169,18 +209,17 @@ if prompt:
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-        # 2. Resim Çizdirme (Yeni Geliştirilmiş Fonksiyonu Kullanıyoruz)
+        # 3. Resim Çizdirme
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
-                img_data = gorsel_indir_ve_getir(prompt)
+                img_data = gorsel_indir_ve_getir(girdi_metni)
                 if img_data:
-                    st.image(img_data, caption=f"İşte senin için çizdiğim: {prompt}", use_container_width=True)
+                    st.image(img_data, caption=f"İşte senin için çizdiğim: {girdi_metni}", use_container_width=True)
                     st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
                 else:
-                    # Hata mesajını biraz daha samimi hale getirdik
-                    st.error("Kanka resim servisi şu an çok yoğun, tıkandı kaldı! 😫 Birkaç saniye sonra tekrar deneyelim.")
+                    st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
 
-        # 3. Normal Sohbet
+        # 4. Normal Metin Sohbeti
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
@@ -204,7 +243,7 @@ if prompt:
                     except Exception as e:
                         cevap = f"Ufak bir aksilik oldu kanka: {e}"
                 else:
-                    cevap = "Kanka Groq API key henüz eklenmemiş. Secrets kısmına 'GROQ_API_KEY' ekleyince zekam tam devreye girecek!"
+                    cevap = "Kanka Groq API key henüz eklenmemiş!"
 
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
