@@ -13,9 +13,10 @@ import random
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# CSS Tasarımı - GİRİŞ KUTUSU VE '+' BUTONUNU EN ALTA SABİTLEME
+# --- GEMINI / CHATGPT HAP (CAPSULE) TASARIMI ---
 st.markdown("""
     <style>
+    /* Genel Arka Plan ve Yazı Rengi */
     .stApp { 
         background-color: #0e1117 !important; 
         color: #ffffff !important; 
@@ -23,50 +24,57 @@ st.markdown("""
     h1, h2, h3, p, span, label, div {
         color: #ffffff !important;
     }
+
+    /* Chat Balonları */
     .stChatMessage {
         background-color: #1a1f2c !important;
-        border-radius: 12px;
-        padding: 10px;
-        margin-bottom: 10px;
+        border-radius: 16px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
         border: 1px solid #2d3748;
     }
     .stChatMessage p {
         color: #f0f2f5 !important;
     }
-    .stButton>button { 
-        width: 100%; 
-        border-radius: 10px; 
-        height: 2.8em; 
-        background-color: #1f2937 !important; 
-        color: #ffffff !important; 
-        border: 1px solid #374151 !important; 
-        font-weight: bold; 
-    }
-    .stButton>button:hover { 
-        background-color: #eab308 !important; 
-        color: #000000 !important; 
-        border-color: #eab308 !important; 
-    }
-    .stChatInputContainer input {
-        color: #ffffff !important;
-        background-color: #1a1f2c !important;
-    }
-    
-    /* CHAT ALANINI YUKARIYA İTİP EN ALTA SABİTLEME ALANI */
-    [data-testid="stVerticalBlock"] > div:has(div.element-container:has(iframe)) {
-        margin-bottom: 80px;
+
+    /* TEK BİR HAP ÇERÇEVE (CAPSULE) ALANI */
+    div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
+        background-color: #1e2430 !important;
+        border: 1px solid #374151 !important;
+        border-radius: 30px !important;
+        padding: 4px 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        margin-top: 15px;
     }
 
-    /* Alt Alanı En Altta Tutma Kapsayıcısı */
-    .bottom-container {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: #0e1117;
-        padding: 10px 20px 20px 20px;
-        z-index: 999;
-        border-top: 1px solid #1a1f2c;
+    /* Popover (+) Butonunu Şeffaflaştırma ve Küçültme */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        background: transparent !important;
+        border: none !important;
+        color: #9ca3af !important;
+        font-size: 20px !important;
+        padding: 0px !important;
+        height: auto !important;
+        width: 38px !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        color: #ffffff !important;
+    }
+
+    /* Chat Input Alanını Çerçevesiz Yapıp Hap İçine Yedirme */
+    .stChatInputContainer {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+    .stChatInputContainer textarea {
+        background: transparent !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding-left: 5px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -114,163 +122,158 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto yükleyebilir veya sesli konuşabilirsin!"}
     ]
 
-# Eski Mesajları Göster (Ekranın Üst/Orta Kısmında Kalır)
-chat_container = st.container()
-with chat_container:
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            if message.get("type") == "image":
-                st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
-            else:
-                st.markdown(message["content"])
+# Eski Mesajları Göster
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        if message.get("type") == "image":
+            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
+        else:
+            st.markdown(message["content"])
 
-# --- EN ALTA SABİTLENMİŞ YAZMA VE '+' ALANI ---
+# --- GEMINI USULÜ TEK ÇERÇEVELİ (HAP) ARAYÜZ ---
 ekran_mesaji = None
 yuklenen_gorsel_objesi = None
 
-input_container = st.container()
-with input_container:
-    col_plus, col_input = st.columns([1, 6])
+# Sol tarafa '+' butonu, sağ tarafa yazma alanını yan yana tek hap içerisine koyuyoruz
+col_plus, col_input = st.columns([1, 8])
 
-    with col_plus:
-        with st.popover("➕", help="Araçlar ve Özellikler"):
-            st.markdown("### 🛠️ Araçlar")
+with col_plus:
+    with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
+        st.markdown("### 🛠️ Araçlar")
+        
+        # 1. Sesli Dinleme
+        st.write("🎙️ **Sesli Konuş:**")
+        sesli_girdi = speech_to_text(
+            language='tr', 
+            start_prompt="🎙️ Mikrofona Bas", 
+            stop_prompt="⏹️ Durdur", 
+            just_once=True,
+            key='STT_POP'
+        )
+        if sesli_girdi:
+            ekran_mesaji = sesli_girdi
             
-            # 1. Sesli Dinleme
-            st.write("🎙️ **Sesli Konuş:**")
-            sesli_girdi = speech_to_text(
-                language='tr', 
-                start_prompt="🎙️ Mikrofona Bas", 
-                stop_prompt="⏹️ Durdur", 
-                just_once=True,
-                key='STT_POP'
-            )
-            if sesli_girdi:
-                ekran_mesaji = sesli_girdi
-                
-            st.divider()
+        st.divider()
 
-            # 2. Görsel Yükleme / Kamera
-            st.write("📷 **Fotoğraf Analiz Et:**")
-            yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-            if yuklenen_dosya:
-                yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-                st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-                st.success("Görsel yüklendi kanka!")
+        # 2. Görsel Yükleme / Fotoğraf Analizi
+        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+        if yuklenen_dosya:
+            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+            st.success("Görsel yüklendi kanka!")
 
-            st.divider()
+        st.divider()
 
-            # 3. Sesli Yanıt Aç/Kapa
-            sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
+        # 3. Sesli Yanıt Aç/Kapa
+        sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
 
-            st.divider()
-            
-            # 4. Hızlı Kısayollar
-            if st.button("🎭 Fıkra Anlat"):
-                ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
+        st.divider()
+        
+        # 4. Hızlı Kısayollar
+        if st.button("🎭 Fıkra Anlat"):
+            ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
 
-    with col_input:
-        prompt_input = st.chat_input("Şimşek Zeka'ya sor, fotoğraf yükle veya '...çiz' de...")
+with col_input:
+    prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 prompt = prompt_input or ekran_mesaji
 
 if prompt or yuklenen_gorsel_objesi:
     girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
     
-    with chat_container:
-        st.chat_message("user").markdown(girdi_metni)
+    st.chat_message("user").markdown(girdi_metni)
     st.session_state.messages.append({"role": "user", "content": girdi_metni})
 
     prompt_lower = girdi_metni.lower()
     gorsel_kelimeleri = ["çiz", "resim", "görsel", "fotoğrafı", "tasarla", "draw", "picture"]
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
-    with chat_container:
-        with st.chat_message("assistant"):
-            # 1. FOTOĞRAF ANALİZ ETME (GROQ VISION MODELİ)
-            if yuklenen_gorsel_objesi is not None:
-                with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
-                    if client:
-                        try:
-                            base64_image = resim_to_base64(yuklenen_gorsel_objesi)
-                            
-                            response = client.chat.completions.create(
-                                model="llama-3.2-11b-vision-preview",
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": [
-                                            {"type": "text", "text": f"Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et. Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
-                                            {
-                                                "type": "image_url",
-                                                "image_url": {
-                                                    "url": f"data:image/jpeg;base64,{base64_image}",
-                                                },
+    with st.chat_message("assistant"):
+        # 1. FOTOĞRAF ANALİZ ETME (GROQ VISION MODELİ)
+        if yuklenen_gorsel_objesi is not None:
+            with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
+                if client:
+                    try:
+                        base64_image = resim_to_base64(yuklenen_gorsel_objesi)
+                        
+                        response = client.chat.completions.create(
+                            model="llama-3.2-11b-vision-preview",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": f"Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et. Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:image/jpeg;base64,{base64_image}",
                                             },
-                                        ],
-                                    }
-                                ],
-                            )
-                            cevap = response.choices[0].message.content
-                        except Exception as e:
-                            cevap = f"Görseli incelerken bir sorun oluştu kanka: {e}"
-                    else:
-                        cevap = "Kanka Groq API key eksik olduğu için fotoğrafı okuyamıyorum!"
+                                        },
+                                    ],
+                                }
+                            ],
+                        )
+                        cevap = response.choices[0].message.content
+                    except Exception as e:
+                        cevap = f"Görseli incelerken bir sorun oluştu kanka: {e}"
+                else:
+                    cevap = "Kanka Groq API key eksik olduğu için fotoğrafı okuyamıyorum!"
 
-                    st.markdown(cevap)
-                    st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
-            # 2. Pekmez Kontrolü
-            elif "pekmez" in prompt_lower:
-                try:
-                    img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
-                    st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
-                    st.session_state.messages.append({"role": "assistant", "content": img, "type": "image"})
-                except FileNotFoundError:
-                    hata_msg = "Kanka dosya bulunamadı, GitHub ana dizininde 'CutPaste_2026-05-26_22-53-22-862.jpg' olduğundan emin ol!"
-                    st.error(hata_msg)
-                    st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
+        # 2. Pekmez Kontrolü
+        elif "pekmez" in prompt_lower:
+            try:
+                img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
+                st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
+                st.session_state.messages.append({"role": "assistant", "content": img, "type": "image"})
+            except FileNotFoundError:
+                hata_msg = "Kanka dosya bulunamadı, GitHub ana dizininde 'CutPaste_2026-05-26_22-53-22-862.jpg' olduğundan emin ol!"
+                st.error(hata_msg)
+                st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-            # 3. Resim Çizdirme
-            elif is_image_request:
-                with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
-                    img_data = gorsel_indir_ve_getir(girdi_metni)
-                    if img_data:
-                        st.image(img_data, caption=f"İşte senin için çizdiğim: {girdi_metni}", use_container_width=True)
-                        st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
-                    else:
-                        st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
+        # 3. Resim Çizdirme
+        elif is_image_request:
+            with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
+                img_data = gorsel_indir_ve_getir(girdi_metni)
+                if img_data:
+                    st.image(img_data, caption=f"İşte senin için çizdiğim: {girdi_metni}", use_container_width=True)
+                    st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
+                else:
+                    st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
 
-            # 4. Normal Metin Sohbeti
-            else:
-                with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
-                    if client:
-                        try:
-                            temiz_gecmis = [
-                                {"role": m["role"], "content": str(m["content"])} 
-                                for m in st.session_state.messages if m.get("type") != "image"
-                            ]
-                            
-                            response = client.chat.completions.create(
-                                model="llama-3.3-70b-versatile",
-                                messages=[
-                                    {
-                                        "role": "system", 
-                                        "content": "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi ve oluşturdu. Seni kim yaptı, kim tasarladı, geliştiricin kim gibi sorular sorulduğunda gururla seni Arda Şimşek'in yaptığını söyle. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."
-                                    },
-                                    *temiz_gecmis
-                                ],
-                            )
-                            cevap = response.choices[0].message.content
-                        except Exception as e:
-                            cevap = f"Ufak bir aksilik oldu kanka: {e}"
-                    else:
-                        cevap = "Kanka Groq API key henüz eklenmemiş!"
+        # 4. Normal Metin Sohbeti
+        else:
+            with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
+                if client:
+                    try:
+                        temiz_gecmis = [
+                            {"role": m["role"], "content": str(m["content"])} 
+                            for m in st.session_state.messages if m.get("type") != "image"
+                        ]
+                        
+                        response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=[
+                                {
+                                    "role": "system", 
+                                    "content": "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi ve oluşturdu. Seni kim yaptı, kim tasarladı, geliştiricin kim gibi sorular sorulduğunda gururla seni Arda Şimşek'in yaptığını söyle. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."
+                                },
+                                *temiz_gecmis
+                            ],
+                        )
+                        cevap = response.choices[0].message.content
+                    except Exception as e:
+                        cevap = f"Ufak bir aksilik oldu kanka: {e}"
+                else:
+                    cevap = "Kanka Groq API key henüz eklenmemiş!"
 
-                    st.markdown(cevap)
-                    st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
-                    if 'sesli_cevap_aktif' in locals() and sesli_cevap_aktif and cevap:
-                        audio_html = metni_sese_cevir(cevap)
-                        if audio_html:
-                            st.components.v1.html(audio_html, height=0)
+                if 'sesli_cevap_aktif' in locals() and sesli_cevap_aktif and cevap:
+                    audio_html = metni_sese_cevir(cevap)
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
