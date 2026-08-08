@@ -189,7 +189,7 @@ if prompt or yuklenen_gorsel_objesi:
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. FOTOĞRAF ANALİZ ETME (GÜNCEL GROQ VISION MODELİ)
+        # 1. FOTOĞRAF ANALİZ ETME (GÜNCEL VISION MODELİ)
         if yuklenen_gorsel_objesi is not None:
             with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 if client:
@@ -197,7 +197,7 @@ if prompt or yuklenen_gorsel_objesi:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         
                         response = client.chat.completions.create(
-                            model="llama-3.2-11b-vision-instruct", # Modeli güncel sürümle değiştirdik!
+                            model="llama-3.2-90b-vision-preview", # Güçlü ve aktif Vision modeli
                             messages=[
                                 {
                                     "role": "user",
