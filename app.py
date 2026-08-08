@@ -134,7 +134,6 @@ for message in st.session_state.messages:
 ekran_mesaji = None
 yuklenen_gorsel_objesi = None
 
-# Sol tarafa '+' butonu, sağ tarafa yazma alanını yan yana tek hap içerisine koyuyoruz
 col_plus, col_input = st.columns([1, 8])
 
 with col_plus:
@@ -190,7 +189,7 @@ if prompt or yuklenen_gorsel_objesi:
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. FOTOĞRAF ANALİZ ETME (GROQ VISION MODELİ)
+        # 1. FOTOĞRAF ANALİZ ETME (GÜNCEL GROQ VISION MODELİ)
         if yuklenen_gorsel_objesi is not None:
             with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 if client:
@@ -198,7 +197,7 @@ if prompt or yuklenen_gorsel_objesi:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         
                         response = client.chat.completions.create(
-                            model="llama-3.2-11b-vision-preview",
+                            model="llama-3.2-11b-vision-instruct", # Modeli güncel sürümle değiştirdik!
                             messages=[
                                 {
                                     "role": "user",
