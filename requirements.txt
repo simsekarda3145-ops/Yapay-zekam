@@ -1,7 +1,6 @@
 streamlit>=1.33.0
 groq
 Pillow
-gTTS
 requests
 streamlit-mic-recorder
 edge-tts
