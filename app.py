@@ -14,9 +14,10 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- GEMINI / CHATGPT HAP (CAPSULE) TASARIMI ---
+# --- GELİŞMİŞ CSS VE EN ALTA SABİTLEME ---
 st.markdown("""
     <style>
+    /* Arka Plan ve Yazı Rengi */
     .stApp { 
         background-color: #0e1117 !important; 
         color: #ffffff !important; 
@@ -25,6 +26,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
+    /* Chat Balonları */
     .stChatMessage {
         background-color: #1a1f2c !important;
         border-radius: 16px;
@@ -36,6 +38,13 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
 
+    /* EN ALT BAR (HAP TASARIMI) */
+    [data-testid="stBottom"] {
+        background-color: #0e1117 !important;
+        border-top: 1px solid #1a1f2c;
+        padding-bottom: 10px;
+    }
+
     div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
         background-color: #1e2430 !important;
         border: 1px solid #374151 !important;
@@ -43,9 +52,9 @@ st.markdown("""
         padding: 4px 12px !important;
         display: flex !important;
         align-items: center !important;
-        margin-top: 15px;
     }
 
+    /* '+' Butonu Tasarımı */
     div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background: transparent !important;
         border: none !important;
@@ -60,6 +69,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
+    /* Chat Input Temizleme */
     .stChatInputContainer {
         border: none !important;
         background: transparent !important;
@@ -80,7 +90,6 @@ st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
 
 # --- DOĞAL VE AKICI MİKROSOFT EDGE SES FONKSİYONU ---
 async def generate_edge_tts(text):
-    # 'tr-TR-AhmetNeural' veya 'tr-TR-EmelNeural' kullanabilirsin
     voice = "tr-TR-AhmetNeural"
     communicate = edge_tts.Communicate(text, voice)
     audio_data = b""
@@ -91,7 +100,6 @@ async def generate_edge_tts(text):
 
 def metni_sese_cevir(text):
     try:
-        # Metin çok uzunsa sesi uzatmasın diye ilk 300 karakteri okutuyoruz
         metin_kisa = text[:300] if len(text) > 300 else text
         audio_bytes = asyncio.run(generate_edge_tts(metin_kisa))
         b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
@@ -135,51 +143,52 @@ for message in st.session_state.messages:
         else:
             st.markdown(message["content"])
 
-# --- GEMINI USULÜ TEK ÇERÇEVELİ (HAP) ARAYÜZ ---
+# --- EKRANIN EN ALTINA SABİTLENMİŞ YAZMA ALANI VE '+' MENÜSÜ ---
 ekran_mesaji = None
 yuklenen_gorsel_objesi = None
 
-col_plus, col_input = st.columns([1, 8])
+with st.bottom():
+    col_plus, col_input = st.columns([1, 8])
 
-with col_plus:
-    with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
-        st.markdown("### 🛠️ Araçlar")
-        
-        # 1. Sesli Dinleme
-        st.write("🎙️ **Sesli Konuş:**")
-        sesli_girdi = speech_to_text(
-            language='tr', 
-            start_prompt="🎙️ Mikrofona Bas", 
-            stop_prompt="⏹️ Durdur", 
-            just_once=True,
-            key='STT_POP'
-        )
-        if sesli_girdi:
-            ekran_mesaji = sesli_girdi
+    with col_plus:
+        with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
+            st.markdown("### 🛠️ Araçlar")
             
-        st.divider()
+            # 1. Sesli Dinleme
+            st.write("🎙️ **Sesli Konuş:**")
+            sesli_girdi = speech_to_text(
+                language='tr', 
+                start_prompt="🎙️ Mikrofona Bas", 
+                stop_prompt="⏹️ Durdur", 
+                just_once=True,
+                key='STT_POP'
+            )
+            if sesli_girdi:
+                ekran_mesaji = sesli_girdi
+                
+            st.divider()
 
-        # 2. Görsel Yükleme / Fotoğraf Analizi
-        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-        if yuklenen_dosya:
-            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
+            # 2. Görsel Yükleme / Fotoğraf Analizi
+            st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+            yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+            if yuklenen_dosya:
+                yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+                st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+                st.success("Görsel yüklendi kanka!")
 
-        st.divider()
+            st.divider()
 
-        # 3. Sesli Yanıt Aç/Kapa
-        sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
+            # 3. Sesli Yanıt Aç/Kapa
+            sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
 
-        st.divider()
-        
-        # 4. Hızlı Kısayollar
-        if st.button("🎭 Fıkra Anlat"):
-            ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
+            st.divider()
+            
+            # 4. Hızlı Kısayollar
+            if st.button("🎭 Fıkra Anlat"):
+                ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
 
-with col_input:
-    prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
+    with col_input:
+        prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 prompt = prompt_input or ekran_mesaji
 
