@@ -38,13 +38,7 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
 
-    /* EN ALT BAR (HAP TASARIMI) */
-    [data-testid="stBottom"] {
-        background-color: #0e1117 !important;
-        border-top: 1px solid #1a1f2c;
-        padding-bottom: 10px;
-    }
-
+    /* EN ALT BAR (HAP TASARIMI VE ALT ALANA SABİTLEME) */
     div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
         background-color: #1e2430 !important;
         border: 1px solid #374151 !important;
@@ -52,6 +46,13 @@ st.markdown("""
         padding: 4px 12px !important;
         display: flex !important;
         align-items: center !important;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 700px !important;
+        z-index: 9999 !important;
     }
 
     /* '+' Butonu Tasarımı */
@@ -82,13 +83,18 @@ st.markdown("""
         box-shadow: none !important;
         padding-left: 5px !important;
     }
+
+    /* Chat alanının alt çubuk arkasında kalmaması için alt boşluk */
+    .main .block-container {
+        padding-bottom: 100px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
 
-# --- DOĞAL VE AKICI MİKROSOFT EDGE SES FONKSİYONU ---
+# --- DOĞAL VE AKICI MICROSOFT EDGE SES FONKSİYONU ---
 async def generate_edge_tts(text):
     voice = "tr-TR-AhmetNeural"
     communicate = edge_tts.Communicate(text, voice)
@@ -147,48 +153,47 @@ for message in st.session_state.messages:
 ekran_mesaji = None
 yuklenen_gorsel_objesi = None
 
-with st.bottom():
-    col_plus, col_input = st.columns([1, 8])
+col_plus, col_input = st.columns([1, 8])
 
-    with col_plus:
-        with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
-            st.markdown("### 🛠️ Araçlar")
+with col_plus:
+    with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
+        st.markdown("### 🛠️ Araçlar")
+        
+        # 1. Sesli Dinleme
+        st.write("🎙️ **Sesli Konuş:**")
+        sesli_girdi = speech_to_text(
+            language='tr', 
+            start_prompt="🎙️ Mikrofona Bas", 
+            stop_prompt="⏹️ Durdur", 
+            just_once=True,
+            key='STT_POP'
+        )
+        if sesli_girdi:
+            ekran_mesaji = sesli_girdi
             
-            # 1. Sesli Dinleme
-            st.write("🎙️ **Sesli Konuş:**")
-            sesli_girdi = speech_to_text(
-                language='tr', 
-                start_prompt="🎙️ Mikrofona Bas", 
-                stop_prompt="⏹️ Durdur", 
-                just_once=True,
-                key='STT_POP'
-            )
-            if sesli_girdi:
-                ekran_mesaji = sesli_girdi
-                
-            st.divider()
+        st.divider()
 
-            # 2. Görsel Yükleme / Fotoğraf Analizi
-            st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-            yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-            if yuklenen_dosya:
-                yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-                st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-                st.success("Görsel yüklendi kanka!")
+        # 2. Görsel Yükleme / Fotoğraf Analizi
+        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+        if yuklenen_dosya:
+            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+            st.success("Görsel yüklendi kanka!")
 
-            st.divider()
+        st.divider()
 
-            # 3. Sesli Yanıt Aç/Kapa
-            sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
+        # 3. Sesli Yanıt Aç/Kapa
+        sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
 
-            st.divider()
-            
-            # 4. Hızlı Kısayollar
-            if st.button("🎭 Fıkra Anlat"):
-                ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
+        st.divider()
+        
+        # 4. Hızlı Kısayollar
+        if st.button("🎭 Fıkra Anlat"):
+            ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
 
-    with col_input:
-        prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
+with col_input:
+    prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 prompt = prompt_input or ekran_mesaji
 
