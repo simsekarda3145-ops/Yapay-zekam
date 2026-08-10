@@ -3,12 +3,13 @@ import urllib.parse
 import streamlit as st
 from groq import Groq
 from PIL import Image
-from gtts import gTTS
 import base64
 import requests
 from io import BytesIO
 from streamlit_mic_recorder import speech_to_text
 import random
+import asyncio
+import edge_tts
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -16,7 +17,6 @@ st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="cent
 # --- GEMINI / CHATGPT HAP (CAPSULE) TASARIMI ---
 st.markdown("""
     <style>
-    /* Genel Arka Plan ve Yazı Rengi */
     .stApp { 
         background-color: #0e1117 !important; 
         color: #ffffff !important; 
@@ -25,7 +25,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Chat Balonları */
     .stChatMessage {
         background-color: #1a1f2c !important;
         border-radius: 16px;
@@ -37,7 +36,6 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
 
-    /* TEK BİR HAP ÇERÇEVE (CAPSULE) ALANI */
     div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
         background-color: #1e2430 !important;
         border: 1px solid #374151 !important;
@@ -48,7 +46,6 @@ st.markdown("""
         margin-top: 15px;
     }
 
-    /* Popover (+) Butonunu Şeffaflaştırma ve Küçültme */
     div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background: transparent !important;
         border: none !important;
@@ -63,7 +60,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Chat Input Alanını Çerçevesiz Yapıp Hap İçine Yedirme */
     .stChatInputContainer {
         border: none !important;
         background: transparent !important;
@@ -82,13 +78,22 @@ st.markdown("""
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
 
-# Ses Oluşturma Fonksiyonu
+# --- DOĞAL VE AKICI MİKROSOFT EDGE SES FONKSİYONU ---
+async def generate_edge_tts(text):
+    # 'tr-TR-AhmetNeural' veya 'tr-TR-EmelNeural' kullanabilirsin
+    voice = "tr-TR-AhmetNeural"
+    communicate = edge_tts.Communicate(text, voice)
+    audio_data = b""
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_data += chunk["data"]
+    return audio_data
+
 def metni_sese_cevir(text):
     try:
-        tts = gTTS(text=text, lang='tr')
-        tts.save("response.mp3")
-        with open("response.mp3", "rb") as f:
-            audio_bytes = f.read()
+        # Metin çok uzunsa sesi uzatmasın diye ilk 300 karakteri okutuyoruz
+        metin_kisa = text[:300] if len(text) > 300 else text
+        audio_bytes = asyncio.run(generate_edge_tts(metin_kisa))
         b64_audio = base64.b64encode(audio_bytes).decode('utf-8')
         return f'<audio autoplay="true" src="data:audio/mp3;base64,{b64_audio}">'
     except Exception:
@@ -189,7 +194,7 @@ if prompt or yuklenen_gorsel_objesi:
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. FOTOĞRAF ANALİZ ETME (GÜNCEL VISION MODELİ)
+        # 1. FOTOĞRAF ANALİZ ETME
         if yuklenen_gorsel_objesi is not None:
             with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 if client:
@@ -197,7 +202,7 @@ if prompt or yuklenen_gorsel_objesi:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         
                         response = client.chat.completions.create(
-                            model="llama-3.2-90b-vision-preview", # Güçlü ve aktif Vision modeli
+                            model="llama-3.2-90b-vision-preview",
                             messages=[
                                 {
                                     "role": "user",
