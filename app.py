@@ -86,7 +86,7 @@ st.markdown("""
 
     /* Chat alanının alt çubuk arkasında kalmaması için alt boşluk */
     .main .block-container {
-        padding-bottom: 100px !important;
+        padding-bottom: 120px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -141,13 +141,19 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto yükleyebilir veya sesli konuşabilirsin!"}
     ]
 
-# Eski Mesajları Göster
-for message in st.session_state.messages:
+# Eski Mesajları ve Dinleme Butonlarını Göster
+for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
             st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
         else:
             st.markdown(message["content"])
+            # Sadece asistan yanıtlarına manuel dinleme butonu koyuyoruz
+            if message["role"] == "assistant" and isinstance(message["content"], str):
+                if st.button("🔊 Sesli Dinle", key=f"listen_{i}"):
+                    audio_html = metni_sese_cevir(message["content"])
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
 
 # --- EKRANIN EN ALTINA SABİTLENMİŞ YAZMA ALANI VE '+' MENÜSÜ ---
 ekran_mesaji = None
@@ -182,13 +188,8 @@ with col_plus:
             st.success("Görsel yüklendi kanka!")
 
         st.divider()
-
-        # 3. Sesli Yanıt Aç/Kapa
-        sesli_cevap_aktif = st.toggle("🔊 Sesli Cevap Verilsin mi?", value=True)
-
-        st.divider()
         
-        # 4. Hızlı Kısayollar
+        # 3. Hızlı Kısayollar
         if st.button("🎭 Fıkra Anlat"):
             ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
 
@@ -240,6 +241,12 @@ if prompt or yuklenen_gorsel_objesi:
 
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+                
+                # Manuel Sesli Dinleme Butonu
+                if st.button("🔊 Sesli Dinle", key=f"listen_new_{len(st.session_state.messages)}"):
+                    audio_html = metni_sese_cevir(cevap)
+                    if audio_html:
+                        st.components.v1.html(audio_html, height=0)
 
         # 2. Pekmez Kontrolü
         elif "pekmez" in prompt_lower:
@@ -291,7 +298,8 @@ if prompt or yuklenen_gorsel_objesi:
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
-                if 'sesli_cevap_aktif' in locals() and sesli_cevap_aktif and cevap:
+                # Manuel Sesli Dinleme Butonu
+                if st.button("🔊 Sesli Dinle", key=f"listen_new_{len(st.session_state.messages)}"):
                     audio_html = metni_sese_cevir(cevap)
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
