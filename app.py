@@ -10,6 +10,9 @@ from streamlit_mic_recorder import speech_to_text
 import random
 import asyncio
 import edge_tts
+from pypdf import PdfReader
+import docx
+from duckduckgo_search import DDGS
 
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
@@ -92,9 +95,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
+st.caption("Groq, Vision AI, Belge Analizi & Canlı İnternet Arama 🚀")
 
-# --- DOĞAL VE AKICI MICROSOFT EDGE SES FONKSİYONU ---
+# --- DOĞAL MİKROSOFT EDGE SES FONKSİYONU ---
 async def generate_edge_tts(text):
     voice = "tr-TR-AhmetNeural"
     communicate = edge_tts.Communicate(text, voice)
@@ -132,13 +135,46 @@ def resim_to_base64(image_file):
     image_file.save(buffered, format="JPEG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
+# Belge (PDF, DOCX, TXT) Okuma Fonksiyonu
+def belge_oku(uploaded_file):
+    try:
+        dosya_adi = uploaded_file.name.lower()
+        if dosya_adi.endswith(".pdf"):
+            reader = PdfReader(uploaded_file)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() or ""
+            return text
+        elif dosya_adi.endswith(".docx"):
+            doc = docx.Document(uploaded_file)
+            return "\n".join([p.text for p in doc.paragraphs])
+        elif dosya_adi.endswith(".txt"):
+            return uploaded_file.read().decode("utf-8")
+    except Exception as e:
+        return f"Belge okunurken hata oluştu: {e}"
+    return ""
+
+# Canlı İnternet Arama Fonksiyonu
+def internette_ara(sorgu):
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(sorgu, max_results=3))
+            if results:
+                arama_özeti = ""
+                for r in results:
+                    arama_özeti += f"Başlık: {r['title']}\nÖzet: {r['body']}\n\n"
+                return arama_özeti
+    except Exception:
+        return None
+    return None
+
 # Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto yükleyebilir veya sesli konuşabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto/belge yükleyebilir, internet araması yapabilir veya sesli konuşabilirsin!"}
     ]
 
 # Eski Mesajları ve Dinleme Butonlarını Göster
@@ -148,7 +184,6 @@ for i, message in enumerate(st.session_state.messages):
             st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
         else:
             st.markdown(message["content"])
-            # Sadece asistan yanıtlarına manuel dinleme butonu koyuyoruz
             if message["role"] == "assistant" and isinstance(message["content"], str):
                 if st.button("🔊 Sesli Dinle", key=f"listen_{i}"):
                     audio_html = metni_sese_cevir(message["content"])
@@ -158,12 +193,14 @@ for i, message in enumerate(st.session_state.messages):
 # --- EKRANIN EN ALTINA SABİTLENMİŞ YAZMA ALANI VE '+' MENÜSÜ ---
 ekran_mesaji = None
 yuklenen_gorsel_objesi = None
+yuklenen_belge_metni = None
+web_search_aktif = False
 
 col_plus, col_input = st.columns([1, 8])
 
 with col_plus:
-    with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
-        st.markdown("### 🛠️ Araçlar")
+    with st.popover("➕", help="Araçlar & Dosya Yükleme"):
+        st.markdown("### 🛠️ Şimşek Araçlar")
         
         # 1. Sesli Dinleme
         st.write("🎙️ **Sesli Konuş:**")
@@ -179,17 +216,29 @@ with col_plus:
             
         st.divider()
 
-        # 2. Görsel Yükleme / Fotoğraf Analizi
-        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+        # 2. Canlı İnternet Arama Switch
+        st.write("🌐 **İnternet Arama:**")
+        web_search_aktif = st.toggle("Canlı İnternet Arama Özelliği", value=False)
+
+        st.divider()
+
+        # 3. Görsel / Belge Yükleme
+        st.write("📁 **Fotoğraf veya Belge Yükle:**")
+        yuklenen_dosya = st.file_uploader("Dosya seçin (Görsel, PDF, Word, TXT)", type=["jpg", "jpeg", "png", "pdf", "docx", "txt"])
+        
         if yuklenen_dosya:
-            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
+            dosya_uzantisi = yuklenen_dosya.name.split(".")[-1].lower()
+            if dosya_uzantisi in ["jpg", "jpeg", "png"]:
+                yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+                st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+                st.success("Görsel yüklendi kanka!")
+            elif dosya_uzantisi in ["pdf", "docx", "txt"]:
+                yuklenen_belge_metni = belge_oku(yuklenen_dosya)
+                st.success(f"📄 {yuklenen_dosya.name} belgesi okundu!")
 
         st.divider()
         
-        # 3. Hızlı Kısayollar
+        # 4. Hızlı Kısayollar
         if st.button("🎭 Fıkra Anlat"):
             ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
 
@@ -198,8 +247,8 @@ with col_input:
 
 prompt = prompt_input or ekran_mesaji
 
-if prompt or yuklenen_gorsel_objesi:
-    girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
+if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
+    girdi_metni = prompt if prompt else "Bu dosyayı benim için detaylıca inceler misin kanka?"
     
     st.chat_message("user").markdown(girdi_metni)
     st.session_state.messages.append({"role": "user", "content": girdi_metni})
@@ -215,7 +264,6 @@ if prompt or yuklenen_gorsel_objesi:
                 if client:
                     try:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
-                        
                         response = client.chat.completions.create(
                             model="llama-3.2-90b-vision-preview",
                             messages=[
@@ -223,12 +271,7 @@ if prompt or yuklenen_gorsel_objesi:
                                     "role": "user",
                                     "content": [
                                         {"type": "text", "text": f"Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et. Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
-                                        {
-                                            "type": "image_url",
-                                            "image_url": {
-                                                "url": f"data:image/jpeg;base64,{base64_image}",
-                                            },
-                                        },
+                                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
                                     ],
                                 }
                             ],
@@ -241,14 +284,32 @@ if prompt or yuklenen_gorsel_objesi:
 
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
-                
-                # Manuel Sesli Dinleme Butonu
-                if st.button("🔊 Sesli Dinle", key=f"listen_new_{len(st.session_state.messages)}"):
-                    audio_html = metni_sese_cevir(cevap)
-                    if audio_html:
-                        st.components.v1.html(audio_html, height=0)
 
-        # 2. Pekmez Kontrolü
+        # 2. PDF / WORD / TXT BELGE ANALİZİ
+        elif yuklenen_belge_metni is not None:
+            with st.spinner("Şimşek Zeka belgeyi okuyor ve analiz ediyor... 📄⚡"):
+                if client:
+                    try:
+                        metin_ozeti = yuklenen_belge_metni[:6000] # Token sınırına takılmamak için
+                        sistem_mesaji = f"Kullanıcı sana bir belge yükledi. Belge içeriği şöyle:\n\n{metin_ozeti}\n\nKullanıcının sorusu: {girdi_metni}. Belgeye dayanarak samimi bir dille cevap ver kanka."
+                        
+                        response = client.chat.completions.create(
+                            model="llama3-70b-8192",
+                            messages=[
+                                {"role": "system", "content": "Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et."},
+                                {"role": "user", "content": sistem_mesaji}
+                            ],
+                        )
+                        cevap = response.choices[0].message.content
+                    except Exception as e:
+                        cevap = f"Belgeyi analiz ederken bir hata oluştu kanka: {e}"
+                else:
+                    cevap = "Kanka Groq API key eksik!"
+
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+
+        # 3. Pekmez Kontrolü
         elif "pekmez" in prompt_lower:
             try:
                 img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
@@ -259,7 +320,7 @@ if prompt or yuklenen_gorsel_objesi:
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-        # 3. Resim Çizdirme
+        # 4. Resim Çizdirme
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 img_data = gorsel_indir_ve_getir(girdi_metni)
@@ -269,18 +330,29 @@ if prompt or yuklenen_gorsel_objesi:
                 else:
                     st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
 
-        # 4. Normal Metin Sohbeti
+        # 5. Normal Metin Sohbeti VEYA Canlı İnternet Arama
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
                     try:
+                        ek_bilgi = ""
+                        # Eğer menüden İnternet Arama açıldıysa internete soruyoruz
+                        if web_search_aktif:
+                            arama_sonucu = internette_ara(girdi_metni)
+                            if arama_sonucu:
+                                ek_bilgi = f"\n\n[İnternet Arama Sonuçları]:\n{arama_sonucu}\nBu bilgileri kullanarak kullanıcıya güncel cevap ver."
+
                         temiz_gecmis = [
                             {"role": m["role"], "content": str(m["content"])} 
                             for m in st.session_state.messages if m.get("type") != "image"
                         ]
                         
+                        # Son mesaja internet arama verisini ekliyoruz
+                        if ek_bilgi:
+                            temiz_gecmis[-1]["content"] += ek_bilgi
+
                         response = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
+                            model="llama3-70b-8192",
                             messages=[
                                 {
                                     "role": "system", 
@@ -298,7 +370,6 @@ if prompt or yuklenen_gorsel_objesi:
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
-                # Manuel Sesli Dinleme Butonu
                 if st.button("🔊 Sesli Dinle", key=f"listen_new_{len(st.session_state.messages)}"):
                     audio_html = metni_sese_cevir(cevap)
                     if audio_html:
