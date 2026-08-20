@@ -265,7 +265,7 @@ if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
                     try:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         response = client.chat.completions.create(
-                            model="llama-3.2-90b-vision-preview",
+                            model="llama-3.2-11b-vision-preview",
                             messages=[
                                 {
                                     "role": "user",
@@ -290,11 +290,11 @@ if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
             with st.spinner("Şimşek Zeka belgeyi okuyor ve analiz ediyor... 📄⚡"):
                 if client:
                     try:
-                        metin_ozeti = yuklenen_belge_metni[:6000] # Token sınırına takılmamak için
+                        metin_ozeti = yuklenen_belge_metni[:6000]
                         sistem_mesaji = f"Kullanıcı sana bir belge yükledi. Belge içeriği şöyle:\n\n{metin_ozeti}\n\nKullanıcının sorusu: {girdi_metni}. Belgeye dayanarak samimi bir dille cevap ver kanka."
                         
                         response = client.chat.completions.create(
-                            model="llama3-70b-8192",
+                            model="llama-3.3-70b-versatile",
                             messages=[
                                 {"role": "system", "content": "Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et."},
                                 {"role": "user", "content": sistem_mesaji}
@@ -336,7 +336,6 @@ if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
                 if client:
                     try:
                         ek_bilgi = ""
-                        # Eğer menüden İnternet Arama açıldıysa internete soruyoruz
                         if web_search_aktif:
                             arama_sonucu = internette_ara(girdi_metni)
                             if arama_sonucu:
@@ -347,12 +346,11 @@ if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
                             for m in st.session_state.messages if m.get("type") != "image"
                         ]
                         
-                        # Son mesaja internet arama verisini ekliyoruz
                         if ek_bilgi:
                             temiz_gecmis[-1]["content"] += ek_bilgi
 
                         response = client.chat.completions.create(
-                            model="llama3-70b-8192",
+                            model="llama-3.3-70b-versatile",
                             messages=[
                                 {
                                     "role": "system", 
