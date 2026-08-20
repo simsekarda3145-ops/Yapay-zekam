@@ -4,3 +4,6 @@ Pillow
 requests
 streamlit-mic-recorder
 edge-tts
+pypdf
+python-docx
+duckduckgo_search
