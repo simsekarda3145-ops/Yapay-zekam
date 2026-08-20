@@ -294,7 +294,7 @@ if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
                         sistem_mesaji = f"Kullanıcı sana bir belge yükledi. Belge içeriği şöyle:\n\n{metin_ozeti}\n\nKullanıcının sorusu: {girdi_metni}. Belgeye dayanarak samimi bir dille cevap ver kanka."
                         
                         response = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
+                            model="llama-3.1-8b-instant",
                             messages=[
                                 {"role": "system", "content": "Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et."},
                                 {"role": "user", "content": sistem_mesaji}
@@ -350,7 +350,7 @@ if prompt or yuklenen_gorsel_objesi or yuklenen_belge_metni:
                             temiz_gecmis[-1]["content"] += ek_bilgi
 
                         response = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
+                            model="llama-3.1-8b-instant",
                             messages=[
                                 {
                                     "role": "system", 
