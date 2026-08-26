@@ -6,7 +6,6 @@ from PIL import Image
 import base64
 import requests
 from io import BytesIO
-from streamlit_mic_recorder import speech_to_text
 import random
 import asyncio
 import edge_tts
@@ -14,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- ÖZEL STİL VE GÖRSEL DÜZENLEME ---
+# --- KUSURSUZ EN ALTA SABİTLENMİŞ CHAT VE + MENÜSÜ CSS & HTML ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,8 +33,26 @@ st.markdown("""
     .stChatMessage p {
         color: #f0f2f5 !important;
     }
+    
+    /* Sayfa içeriğinin alttaki sabit bara takılmaması için boşluk */
     .main .block-container {
-        padding-bottom: 100px !important;
+        padding-bottom: 150px !important;
+    }
+    
+    /* Streamlit'in orijinal input alanını gizleyip kendi özel alt barımızı oturtuyoruz */
+    div[data-testid="stChatInput"] {
+        position: fixed !important;
+        bottom: 15px !important;
+        left: 50% !important;
+        transform: translateX(-50% ) !important;
+        width: 92% !important;
+        max-width: 700px !important;
+        z-index: 99999 !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 24px !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.5) !important;
+        padding: 4px 12px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -87,12 +104,11 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Yan taraftaki araçlar menüsünden foto yükleyebilir veya sesli konuşabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sol alttaki '+' butonuna basarak foto yükleyebilir veya fıkra isteyebilirsin!"}
     ]
 
-# Sidebar (Araçlar Menüsü - Telefon için en stabil ve kullanışlı yer)
-with st.sidebar:
-    st.markdown("### 🛠️ Şimşek Zeka Araçları")
+# Ekstra Araçlar İçin Expandable / Buton Alanı (Üst Kısımda Kolay Erişim)
+with st.expander("➕ Ekstra Araçlar (Fotoğraf Yükle & Hızlı Menü)", expanded=False):
     st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
     yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
     
@@ -100,17 +116,11 @@ with st.sidebar:
     if yuklenen_dosya:
         yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
         st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-        st.success("Görsel yüklendi kanka!")
+        st.success("Görsel yüklendi kanka! Şimdi aşağıdan mesajını yaz.")
 
     st.divider()
-    st.write("🎙️ **Sesli Konuş:**")
-    sesli_girdi = speech_to_text(
-        language='tr', 
-        start_prompt="🎙️ Mikrofona Bas", 
-        stop_prompt="⏹️ Durdur", 
-        just_once=True,
-        key='STT_SIDEBAR'
-    )
+    if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
+        st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
 # Eski Mesajları Göster
 for i, message in enumerate(st.session_state.messages):
@@ -125,12 +135,17 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- STREAMLIT'İN KENDİSİNİN EN ALTA SABİTLEDİĞİ SOHBET GİRDİSİ ---
+# Sohbet Girdisi (Streamlit otomatik olarak en alta sabitler)
 chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
-prompt = chat_input_text or sesli_girdi
+# Fıkra butonuna basıldıysa onu girdi yapalım
+if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
+    prompt = st.session_state.fikra_isteği
+    st.session_state.fikra_isteği = None
+else:
+    prompt = chat_input_text
 
-if prompt or yuklenen_gorsel_objesi:
+if prompt or ('yuklenen_gorsel_objesi' in locals() and yuklenen_gorsel_objesi is not None):
     girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
     
     st.chat_message("user").markdown(girdi_metni)
@@ -140,13 +155,15 @@ if prompt or yuklenen_gorsel_objesi:
     gorsel_kelimeleri = ["çiz", "resim", "görsel", "fotoğrafı", "tasarla", "draw", "picture"]
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
+    active_image = yuklenen_gorsel_objesi if ('yuklenen_gorsel_objesi' in locals() and yuklenen_gorsel_objesi is not None) else None
+
     with st.chat_message("assistant"):
         # 1. FOTOĞRAF ANALİZ ETME
-        if yuklenen_gorsel_objesi is not None:
+        if active_image is not None:
             with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 if client:
                     try:
-                        base64_image = resim_to_base64(yuklenen_gorsel_objesi)
+                        base64_image = resim_to_base64(active_image)
                         response = client.chat.completions.create(
                             model="openai/gpt-oss-20b",
                             messages=[
