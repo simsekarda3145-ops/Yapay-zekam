@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ SABİT ALT BAR CSS & KLAVYE DÜZENİ ---
+# --- KUSURSUZ TEK PARÇA ALT BAR CSS & JS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -44,20 +44,10 @@ st.markdown("""
         display: none !important;
     }
 
-    /* Sabit Alt Bar Kapsayıcısı */
-    .fixed-bottom-bar {
-        position: fixed !important;
-        bottom: 25px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 92% !important;
-        max-width: 700px !important;
-        z-index: 99999 !important;
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 24px !important;
-        padding: 6px 12px !important;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8) !important;
+    /* Streamlit'in kendi kolon ve form marginlerini sıfırlıyoruz ki üst üste binmesinler */
+    div[data-testid="column"] {
+        width: unset !important;
+        flex: unset !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -122,11 +112,32 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- + BUTONU VE METİN BALONCUĞU ---
+# --- + BUTONU VE METİN KUTUSU (TEK ÇERÇEVE MİMARİSİ) ---
 yuklenen_gorsel_objesi = None
 
-st.markdown('<div class="fixed-bottom-bar">', unsafe_allow_html=True)
-col_plus, col_input, col_btn = st.columns([1, 6, 2])
+# Alt barı tamamen saran tek parça tasarımı uyguluyoruz
+st.markdown("""
+    <div style="
+        position: fixed;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 92%;
+        max-width: 700px;
+        z-index: 99999;
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 28px;
+        padding: 4px 10px;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    ">
+""", unsafe_allow_html=True)
+
+# Streamlit elemanlarını bu flex div'in içine yerleştiriyoruz
+col_plus, col_input, col_btn = st.columns([0.15, 0.65, 0.2])
 
 with col_plus:
     with st.popover("➕", help="Araçlar Menüsü"):
@@ -147,7 +158,7 @@ with col_input:
     user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="user_msg_input")
 
 with col_btn:
-    gonder_tiklandi = st.button("Gönder 🚀", use_container_width=True)
+    gonder_tiklandi = st.button("Gönder", use_container_width=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
