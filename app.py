@@ -14,7 +14,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- GELİŞMİŞ CSS VE EN ALTA SABİTLEME ---
+# --- GELİŞMİŞ CSS VE EN ALTA KUSURSUZ SABİTLEME ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,6 +34,8 @@ st.markdown("""
     .stChatMessage p {
         color: #f0f2f5 !important;
     }
+    
+    /* İŞARETLEDİĞİN YERİ (YAZMA ALANI VE + MENÜSÜ) EN ALTA SABİTLEME */
     div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
         background-color: #1e2430 !important;
         border: 1px solid #374151 !important;
@@ -42,13 +44,15 @@ st.markdown("""
         display: flex !important;
         align-items: center !important;
         position: fixed !important;
-        bottom: 20px !important;
+        bottom: 50px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
-        width: 90% !important;
+        width: 94% !important;
         max-width: 700px !important;
-        z-index: 9999 !important;
+        z-index: 99999 !important;
+        box-shadow: 0px -4px 20px rgba(0,0,0,0.6) !important;
     }
+
     div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background: transparent !important;
         border: none !important;
@@ -74,8 +78,9 @@ st.markdown("""
         box-shadow: none !important;
         padding-left: 5px !important;
     }
+    /* Mesajların alt çubuğun altında kalmaması için bırakılan boşluk */
     .main .block-container {
-        padding-bottom: 120px !important;
+        padding-bottom: 140px !important;
     }
     </style>
 """, unsafe_allow_html=True)
