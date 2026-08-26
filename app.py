@@ -10,19 +10,12 @@ import random
 import asyncio
 import edge_tts
 
-# Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ TEK PARÇA METİN BALONCUĞU VE SABİTLEME CSS ---
 st.markdown("""
     <style>
-    .stApp { 
-        background-color: #0e1117 !important; 
-        color: #ffffff !important; 
-    }
-    h1, h2, h3, p, span, label, div {
-        color: #ffffff !important;
-    }
+    .stApp { background-color: #0e1117 !important; color: #ffffff !important; }
+    h1, h2, h3, p, span, label, div { color: #ffffff !important; }
     .stChatMessage {
         background-color: #1a1f2c !important;
         border-radius: 16px;
@@ -30,48 +23,13 @@ st.markdown("""
         margin-bottom: 12px;
         border: 1px solid #2d3748;
     }
-    .stChatMessage p {
-        color: #f0f2f5 !important;
-    }
-    
-    /* Sayfa alt boşluğu */
-    .main .block-container {
-        padding-bottom: 140px !important;
-    }
-
-    /* Orijinal St.ChatInput gizli */
-    div[data-testid="stChatInput"] {
-        display: none !important;
-    }
-
-    /* Tek parça alt bar */
-    .custom-chat-container {
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 92% !important;
-        max-width: 700px !important;
-        z-index: 99999 !important;
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 28px !important;
-        padding: 6px 12px !important;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8) !important;
-    }
-
-    /* Input içindeki kenarlıkları temizle */
-    div[data-baseweb="input"] {
-        background-color: transparent !important;
-        border: none !important;
-    }
+    .main .block-container { padding-bottom: 150px !important; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
 
-# Ses Fonksiyonları
 async def generate_edge_tts(text):
     voice = "tr-TR-AhmetNeural"
     communicate = edge_tts.Communicate(text, voice)
@@ -112,10 +70,9 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sol taraftaki '+' butonuna basarak araçları açabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Araçlar butonuna basarak fotoğraf yükleyebilirsin!"}
     ]
 
-# Mesaj Geçmişi
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
@@ -128,56 +85,35 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- ALT MİMARİ (+ MENÜSÜ VE ENTER DESTEKLİ FORM) ---
+# Araçlar Menüsü (Alt Input'un Hemen Üstü)
 yuklenen_gorsel_objesi = None
+with st.popover("➕ Araçlar Menüsü", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
+    st.markdown("### 🛠️ Şimşek Zeka Araçları")
+    yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+    if yuklenen_dosya:
+        yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+        st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+        st.success("Görsel yüklendi kanka!")
+    
+    st.divider()
+    if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
+        st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-st.markdown('<div class="custom-chat-container">', unsafe_allow_html=True)
-col_plus, col_form = st.columns([0.15, 0.85])
+# Standart Chat Input (Telefon Klavesindeki Enter %100 Çalışır)
+prompt = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
-# Popover form dışında durduğu için hata vermeyecek
-with col_plus:
-    with st.popover("➕", help="Araçlar Menüsü"):
-        st.markdown("### 🛠️ Şimşek Zeka Araçları")
-        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-        
-        if yuklenen_dosya:
-            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
-
-        st.divider()
-        if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
-            st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
-
-# Form sadece girdi alanı ve küçük gönder butonunu kapsar (Klavyeden Enter çalışır)
-with col_form:
-    with st.form(key="chat_input_form", clear_on_submit=True):
-        col_in, col_btn = st.columns([0.8, 0.2])
-        with col_in:
-            user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="chat_input_box")
-        with col_btn:
-            submitted = st.form_submit_button("🚀", use_container_width=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Mantık İşleme
-prompt = ""
-if submitted and user_input:
-    prompt = user_input
-elif "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
+if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
     prompt = st.session_state.fikra_isteği
     st.session_state.fikra_isteği = None
 
 if prompt or yuklenen_gorsel_objesi is not None:
-    girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
+    girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka?"
     
     st.chat_message("user").markdown(girdi_metni)
     st.session_state.messages.append({"role": "user", "content": girdi_metni})
 
     prompt_lower = girdi_metni.lower()
-    gorsel_kelimeleri = ["çiz", "resim", "görsel", "fotoğrafı", "tasarla", "draw", "picture"]
-    is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
+    is_image_request = any(k in prompt_lower for k in ["çiz", "resim", "görsel", "tasarla"])
 
     with st.chat_message("assistant"):
         if yuklenen_gorsel_objesi is not None:
@@ -187,78 +123,47 @@ if prompt or yuklenen_gorsel_objesi is not None:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         response = client.chat.completions.create(
                             model="openai/gpt-oss-20b",
-                            messages=[
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {"type": "text", "text": f"Sen Şimşek Zeka'sın. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et. Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
-                                        {
-                                            "type": "image_url",
-                                            "image_url": {
-                                                "url": f"data:image/jpeg;base64,{base64_image}",
-                                            },
-                                        },
-                                    ],
-                                }
-                            ],
+                            messages=[{
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": f"Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]
+                            }]
                         )
                         cevap = response.choices[0].message.content
                     except Exception as e:
-                        cevap = f"Görseli incelerken bir sorun oluştu kanka: {e}"
+                        cevap = f"Hata oluştu kanka: {e}"
                 else:
-                    cevap = "Kanka Groq API key eksik olduğu için fotoğrafı okuyamıyorum!"
-
+                    cevap = "API Key eksik kanka!"
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
-
-        elif "pekmez" in prompt_lower:
-            try:
-                img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
-                st.image(img, caption="İşte senin pekmez görselin kanka! 🍇", use_container_width=True)
-                st.session_state.messages.append({"role": "assistant", "content": img, "type": "image"})
-            except FileNotFoundError:
-                hata_msg = "Kanka dosya bulunamadı, GitHub ana dizininde 'CutPaste_2026-05-26_22-53-22-862.jpg' olduğundan emin ol!"
-                st.error(hata_msg)
-                st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 img_data = gorsel_indir_ve_getir(girdi_metni)
                 if img_data:
-                    st.image(img_data, caption=f"İşte senin için çizdiğim: {girdi_metni}", use_container_width=True)
+                    st.image(img_data, caption=f"İşte çizim: {girdi_metni}", use_container_width=True)
                     st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
                 else:
-                    st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
+                    st.error("Resim servisi yoğun kanka!")
 
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
                     try:
-                        temiz_gecmis = [
-                            {"role": m["role"], "content": str(m["content"])} 
-                            for m in st.session_state.messages if m.get("type") != "image"
-                        ]
-                        
+                        temiz_gecmis = [{"role": m["role"], "content": str(m["content"])} for m in st.session_state.messages if m.get("type") != "image"]
                         response = client.chat.completions.create(
                             model="openai/gpt-oss-20b",
                             messages=[
-                                {
-                                    "role": "system", 
-                                    "content": "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi ve oluşturdu. Seni kim yaptı, kim tasarladı, geliştiricin kim gibi sorular sorulduğunda gururla seni Arda Şimşek'in yaptığını söyle. Sen samimi, eğlenceli ve kullanıcıya her zaman 'kanka' diye hitap eden çok zeki, ışık hızında ve yardımsever bir yapay zeka asistanısın."
-                                },
+                                {"role": "system", "content": "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et."},
                                 *temiz_gecmis
-                            ],
+                            ]
                         )
                         cevap = response.choices[0].message.content
                     except Exception as e:
-                        cevap = f"Ufak bir aksilik oldu kanka: {e}"
+                        cevap = f"Hata: {e}"
                 else:
-                    cevap = "Kanka Groq API key henüz eklenmemiş!"
-
+                    cevap = "API Key eksik kanka!"
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
-
-                if st.button("🔊 Sesli Dinle", key=f"listen_new_{len(st.session_state.messages)}"):
-                    audio_html = metni_sese_cevir(cevap)
-                    if audio_html:
-                        st.components.v1.html(audio_html, height=0)
