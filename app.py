@@ -205,7 +205,7 @@ if prompt or yuklenen_gorsel_objesi:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         
                         response = client.chat.completions.create(
-                            model="llama-3.2-11b-vision-preview",
+                            model="openai/gpt-oss-20b",
                             messages=[
                                 {
                                     "role": "user",
@@ -262,7 +262,7 @@ if prompt or yuklenen_gorsel_objesi:
                         ]
                         
                         response = client.chat.completions.create(
-                            model="llama3-8b-8192",
+                            model="openai/gpt-oss-20b",
                             messages=[
                                 {
                                     "role": "system", 
