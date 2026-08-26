@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- SABİT METİN BALONCUĞU VE ARAYÜZ CSS ---
+# --- KUSURSUZ SABİT ALT BAR CSS & KLAVYE DÜZENİ ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,7 +34,7 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* Sayfa alt boşluğu (Baloncuğun yazıları kapatmaması için) */
+    /* Sayfa alt boşluğu */
     .main .block-container {
         padding-bottom: 160px !important;
     }
@@ -44,7 +44,7 @@ st.markdown("""
         display: none !important;
     }
 
-    /* Sabit Alt Bar Kapsayıcısı (Metin Baloncuğu Sabitleme) */
+    /* Sabit Alt Bar Kapsayıcısı */
     .fixed-bottom-bar {
         position: fixed !important;
         bottom: 25px !important;
@@ -122,11 +122,11 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- + BUTONU VE METİN BALONCUĞU SABİTLEME ---
+# --- + BUTONU VE METİN BALONCUĞU ---
 yuklenen_gorsel_objesi = None
 
 st.markdown('<div class="fixed-bottom-bar">', unsafe_allow_html=True)
-col_plus, col_input = st.columns([1, 8])
+col_plus, col_input, col_btn = st.columns([1, 6, 2])
 
 with col_plus:
     with st.popover("➕", help="Araçlar Menüsü"):
@@ -144,14 +144,16 @@ with col_plus:
             st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
 with col_input:
-    with st.form(key="chat_bar_form", clear_on_submit=True):
-        user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor veya '...çiz' de...", label_visibility="collapsed")
-        submitted = st.form_submit_button("Gönder 🚀")
+    user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="user_msg_input")
+
+with col_btn:
+    gonder_tiklandi = st.button("Gönder 🚀", use_container_width=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Mantık İşleme
 prompt = ""
-if submitted and user_input:
+if gonder_tiklandi and user_input:
     prompt = user_input
 elif "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
     prompt = st.session_state.fikra_isteği
