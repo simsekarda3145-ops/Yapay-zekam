@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ TEK PARÇA ALT BAR CSS & JS ---
+# --- KUSURSUZ TEK PARÇA METİN BALONCUĞU VE SABİTLEME CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,20 +34,33 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* Sayfa alt boşluğu */
+    /* Sayfanın altındaki içeriklerin kapanmaması için boşluk */
     .main .block-container {
-        padding-bottom: 160px !important;
+        padding-bottom: 140px !important;
     }
 
-    /* Orijinal St.ChatInput gizlendi */
+    /* Streamlit'in kendi orijinal inputunu gizliyoruz */
     div[data-testid="stChatInput"] {
         display: none !important;
     }
 
-    /* Streamlit'in kendi kolon ve form marginlerini sıfırlıyoruz ki üst üste binmesinler */
-    div[data-testid="column"] {
-        width: unset !important;
-        flex: unset !important;
+    /* BURASI ÇOK ÖNEMLİ: Tüm alt barı tek bir şık metin baloncuğuna çeviriyoruz */
+    .custom-chat-container {
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 92% !important;
+        max-width: 700px !important;
+        z-index: 99999 !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 28px !important;
+        padding: 6px 12px !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -112,59 +125,41 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- + BUTONU VE METİN KUTUSU (TEK ÇERÇEVE MİMARİSİ) ---
+# --- TEK PARÇA SABİT METİN BALONCUĞU ---
 yuklenen_gorsel_objesi = None
 
-# Alt barı tamamen saran tek parça tasarımı uyguluyoruz
-st.markdown("""
-    <div style="
-        position: fixed;
-        bottom: 25px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 92%;
-        max-width: 700px;
-        z-index: 99999;
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 28px;
-        padding: 4px 10px;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    ">
-""", unsafe_allow_html=True)
+st.markdown('<div class="custom-chat-container">', unsafe_allow_html=True)
 
-# Streamlit elemanlarını bu flex div'in içine yerleştiriyoruz
-col_plus, col_input, col_btn = st.columns([0.15, 0.65, 0.2])
+# Form yapısı sayesinde klavyeden enter'a basınca veya gönder butonuna dokununca çalışır
+with st.form(key="chat_form", clear_on_submit=True):
+    col1, col2, col3 = st.columns([0.15, 0.70, 0.15])
+    
+    with col1:
+        with st.popover("➕", help="Araçlar Menüsü"):
+            st.markdown("### 🛠️ Şimşek Zeka Araçları")
+            st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+            yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+            
+            if yuklenen_dosya:
+                yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+                st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+                st.success("Görsel yüklendi kanka!")
 
-with col_plus:
-    with st.popover("➕", help="Araçlar Menüsü"):
-        st.markdown("### 🛠️ Şimşek Zeka Araçları")
-        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-        
-        if yuklenen_dosya:
-            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
+            st.divider()
+            if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
+                st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-        st.divider()
-        if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
-            st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+    with col2:
+        user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="chat_input_box")
 
-with col_input:
-    user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="user_msg_input")
-
-with col_btn:
-    gonder_tiklandi = st.button("Gönder", use_container_width=True)
+    with col3:
+        submitted = st.form_submit_button("🚀", use_container_width=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Mantık İşleme
 prompt = ""
-if gonder_tiklandi and user_input:
+if submitted and user_input:
     prompt = user_input
 elif "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
     prompt = st.session_state.fikra_isteği
