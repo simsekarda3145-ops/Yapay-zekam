@@ -1,9 +1,6 @@
-streamlit>=1.33.0
+streamlit
 groq
 Pillow
 requests
 streamlit-mic-recorder
 edge-tts
-pypdf
-python-docx
-duckduckgo_search
