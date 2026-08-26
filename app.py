@@ -26,15 +26,15 @@ st.markdown("""
     }
     
     /* Sayfa alt boşluğu */
-    .main .block-container { padding-bottom: 180px !important; }
+    .main .block-container { padding-bottom: 200px !important; }
 
-    /* Popover (Araçlar Butonu) - Küçültülmüş ve Yukarı Alınmış CSS */
+    /* Popover (Araçlar Butonu) - Biraz Daha Yukarıda CSS */
     div[data-testid="stPopover"] {
         position: fixed !important;
-        bottom: 100px !important;  /* Biraz daha yukarı çekildi */
+        bottom: 125px !important;  /* Biraz daha yukarı çekildi */
         left: 50% !important;
         transform: translateX(-50%) !important;
-        width: auto !important;     /* Genişlik içeriğe göre küçültüldü */
+        width: auto !important;
         max-width: 220px !important;
         z-index: 99999 !important;
     }
@@ -110,7 +110,7 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# Araçlar Menüsü (Küçültülmüş ve Yukarı Sabitlenmiş Düğme)
+# Araçlar Menüsü (Daha Yukarıya Sabitlendi)
 yuklenen_gorsel_objesi = None
 with st.popover("➕ Araçlar", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
