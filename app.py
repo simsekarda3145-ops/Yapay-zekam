@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- STABİL ALT BAR CSS ---
+# --- SABİT METİN BALONCUĞU VE ARAYÜZ CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,29 +34,30 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
+    /* Sayfa alt boşluğu (Baloncuğun yazıları kapatmaması için) */
     .main .block-container {
-        padding-bottom: 140px !important;
+        padding-bottom: 160px !important;
     }
 
-    /* Orijinal Chat Input Bileşenini Gizliyoruz */
+    /* Orijinal St.ChatInput gizlendi */
     div[data-testid="stChatInput"] {
         display: none !important;
     }
 
-    /* Sabit Alt Bar Kapsayıcısı */
+    /* Sabit Alt Bar Kapsayıcısı (Metin Baloncuğu Sabitleme) */
     .fixed-bottom-bar {
-        position: fixed;
-        bottom: 50px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 90%;
-        max-width: 700px;
-        z-index: 99999;
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 20px;
-        padding: 8px 12px;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7);
+        position: fixed !important;
+        bottom: 25px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 92% !important;
+        max-width: 700px !important;
+        z-index: 99999 !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 24px !important;
+        padding: 6px 12px !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8) !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -121,11 +122,11 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- YAN YANA HİZALANMIŞ EN ALT BAR ---
+# --- + BUTONU VE METİN BALONCUĞU SABİTLEME ---
 yuklenen_gorsel_objesi = None
 
 st.markdown('<div class="fixed-bottom-bar">', unsafe_allow_html=True)
-col_plus, col_input = st.columns([1, 6])
+col_plus, col_input = st.columns([1, 8])
 
 with col_plus:
     with st.popover("➕", help="Araçlar Menüsü"):
