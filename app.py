@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- TEK PARÇA KUSURSUZ ALT BAR VE + BUTONU CSS ---
+# --- KUSURSUZ TEK SATIR CHAT İNPUT VE HİZALAMA CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,18 +34,13 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* İçerik alttaki sabit çubuğun altında kalmasın diye boşluk */
+    /* Mesajların alt çubuğun altında kalmaması için bırakılan boşluk */
     .main .block-container {
-        padding-bottom: 160px !important;
+        padding-bottom: 140px !important;
     }
 
-    /* Streamlit'in orijinal inputunu gizliyoruz, kendi özel formumuzu sabitleyeceğiz */
+    /* CHAT INPUT ALANINI EN ALTA SABİTLEME */
     div[data-testid="stChatInput"] {
-        display: none !important;
-    }
-
-    /* Sabit Alt Bar Konteyneri ("Manage app" çubuğunun hemen üzerinde) */
-    .custom-bottom-bar {
         position: fixed !important;
         bottom: 50px !important;
         left: 50% !important;
@@ -57,9 +52,39 @@ st.markdown("""
         border: 1px solid #30363d !important;
         border-radius: 28px !important;
         box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7) !important;
-        padding: 6px 12px !important;
-        display: flex !important;
-        align-items: center !important;
+        padding: 4px 8px 4px 45px !important; /* Sol tarafta + butonu için alan */
+    }
+
+    /* Girdi metin alanının arka planını şeffaf yapalım */
+    .stChatInputContainer textarea {
+        background: transparent !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* + Butonunu chat kutusunun sol içine kilitleyen CSS */
+    div[data-testid="stPopover"] {
+        position: fixed !important;
+        bottom: 54px !important;
+        left: calc(50% - 330px) !important;
+        z-index: 100000 !important;
+    }
+
+    @media (max-width: 768px) {
+        div[data-testid="stPopover"] {
+            left: 25px !important;
+        }
+    }
+
+    div[data-testid="stPopover"] > button {
+        background: transparent !important;
+        border: none !important;
+        color: #9ca3af !important;
+        font-size: 20px !important;
+        box-shadow: none !important;
+        padding: 0px 8px !important;
+        height: auto !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -127,58 +152,34 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- ALT KISIMDA TEK BALONCUK İÇİNDE + BUTONU VE GİRDİ ALANI ---
-# Session state ile tetikleyicileri kontrol edelim
-if "girdi_islendi" not in st.session_state:
-    st.session_state.girdi_islendi = ""
-
-with st.container():
-    st.markdown('<div class="custom-bottom-bar">', unsafe_allow_html=True)
+# --- SOL İÇTEKİ + BUTONU VE POP-OVER ARAÇLAR MENÜSÜ ---
+yuklenen_gorsel_objesi = None
+with st.popover("➕", help="Araçlar Menüsü"):
+    st.markdown("### 🛠️ Şimşek Zeka Araçları")
+    st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+    yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
     
-    col_artid, col_text, col_send = st.columns([1, 10, 1])
-    
-    with col_artid:
-        with st.popover("➕", help="Araçlar Menüsü"):
-            st.markdown("### 🛠️ Şimşek Zeka Araçları")
-            st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-            yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-            
-            yuklenen_gorsel_objesi = None
-            if yuklenen_dosya:
-                st.session_state.yuklenen_gorsel = yuklenen_dosya
-                st.success("Görsel yüklendi kanka!")
+    if yuklenen_dosya:
+        yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+        st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+        st.success("Görsel yüklendi kanka!")
 
-            st.divider()
-            if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
-                st.session_state.tetiklenen_mesaj = "Bana komik bir fıkra anlat kanka!"
+    st.divider()
+    if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
+        st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-    with col_text:
-        # Form kullanarak enter'a basınca veya gönder butonuna basınca çalışmasını sağlıyoruz
-        with st.form(key="chat_form", clear_on_submit=True):
-            user_text = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor veya '...çiz' de...", label_visibility="collapsed")
-            submit_button = st.form_submit_button("🚀")
+# --- TEK PARÇA SOHBET INPUTU (GÖNDER BUTONU ZATEN SAĞ İÇİNDE) ---
+chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
+    prompt = st.session_state.fikra_isteği
+    st.session_state.fikra_isteği = None
+else:
+    prompt = chat_input_text
 
-# Mesaj veya fıkra tetiklendiyse alalım
-prompt = ""
-if submit_button and user_text:
-    prompt = user_text
-elif "tetiklenen_mesaj" in st.session_state and st.session_state.tetiklenen_mesaj:
-    prompt = st.session_state.tetiklenen_mesaj
-    st.session_state.tetiklenen_mesaj = None
-
-aktif_gorsel = st.session_state.get("yuklenen_gorsel", None)
-
-if prompt or aktif_gorsel is not None:
+if prompt or yuklenen_gorsel_objesi is not None:
     girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
     
-    # Görsel objesini açalım
-    gorsel_objesi = None
-    if aktif_gorsel is not None:
-        gorsel_objesi = Image.open(aktif_gorsel)
-        st.session_state.yuklenen_gorsel = None # Sıfırla
-
     st.chat_message("user").markdown(girdi_metni)
     st.session_state.messages.append({"role": "user", "content": girdi_metni})
 
@@ -188,11 +189,11 @@ if prompt or aktif_gorsel is not None:
 
     with st.chat_message("assistant"):
         # 1. FOTOĞRAF ANALİZ ETME
-        if gorsel_objesi is not None:
+        if yuklenen_gorsel_objesi is not None:
             with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 if client:
                     try:
-                        base64_image = resim_to_base64(gorsel_objesi)
+                        base64_image = resim_to_base64(yuklenen_gorsel_objesi)
                         response = client.chat.completions.create(
                             model="openai/gpt-oss-20b",
                             messages=[
