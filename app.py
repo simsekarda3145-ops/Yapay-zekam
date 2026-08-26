@@ -16,6 +16,7 @@ st.markdown("""
     <style>
     .stApp { background-color: #0e1117 !important; color: #ffffff !important; }
     h1, h2, h3, p, span, label, div { color: #ffffff !important; }
+    
     .stChatMessage {
         background-color: #1a1f2c !important;
         border-radius: 16px;
@@ -23,7 +24,29 @@ st.markdown("""
         margin-bottom: 12px;
         border: 1px solid #2d3748;
     }
-    .main .block-container { padding-bottom: 150px !important; }
+    
+    /* Sayfa alt boşluğu (Chat kutusunun içeriği kapatmaması için) */
+    .main .block-container { padding-bottom: 180px !important; }
+
+    /* Popover (Araçlar Butonu) Özel Hizalama CSS */
+    div[data-testid="stPopover"] {
+        position: fixed !important;
+        bottom: 85px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 700px !important;
+        z-index: 99999 !important;
+    }
+
+    div[data-testid="stPopover"] > button {
+        width: 100% !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 12px !important;
+        color: #00f2fe !important;
+        font-weight: bold !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -70,7 +93,7 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Araçlar butonuna basarak fotoğraf yükleyebilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Üstteki Araçlar butonuna basarak fotoğraf yükleyebilirsin!"}
     ]
 
 for i, message in enumerate(st.session_state.messages):
@@ -85,9 +108,9 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# Araçlar Menüsü (Alt Input'un Hemen Üstü)
+# Araçlar Menüsü (Chat Kutumuzun Tam Üstüne Sabitlendi)
 yuklenen_gorsel_objesi = None
-with st.popover("➕ Araçlar Menüsü", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
+with st.popover("➕ Şimşek Araçlar Menüsü", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
     yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
     if yuklenen_dosya:
