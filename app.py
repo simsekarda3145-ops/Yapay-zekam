@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- CHAT INPUT İÇİNE + BUTONU ENTEGRE EDEN ÖZEL CSS ---
+# --- KUSURSUZ EN ALTA SABİTLEME VE + BUTONU HİZALAMA CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,15 +34,15 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* İçerik alttaki sabit bara çarpmasın diye alt boşluk */
+    /* İçerik alttaki sabit çubuğun altında kalmasın diye alt boşluk */
     .main .block-container {
-        padding-bottom: 140px !important;
+        padding-bottom: 160px !important;
     }
 
-    /* Streamlit Chat Input Alanını En Alta Sabitleme */
+    /* Streamlit Chat Input Alanını En Alta ("Manage app" çubuğunun hemen üzerine) Sabitleme */
     div[data-testid="stChatInput"] {
         position: fixed !important;
-        bottom: 15px !important;
+        bottom: 50px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: 92% !important;
@@ -51,8 +51,8 @@ st.markdown("""
         background-color: #161b22 !important;
         border: 1px solid #30363d !important;
         border-radius: 24px !important;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.6) !important;
-        padding: 4px 8px 4px 45px !important; /* Sol tarafta + butonu için boşluk bıraktık */
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7) !important;
+        padding: 4px 8px 4px 45px !important;
     }
 
     /* stChatInput içindeki metin alanı */
@@ -61,6 +61,24 @@ st.markdown("""
         color: #ffffff !important;
         border: none !important;
         box-shadow: none !important;
+    }
+
+    /* + Butonunu tam chat inputun sol içine kilitleyen CSS */
+    button[aria-label="➕"] {
+        position: fixed !important;
+        bottom: 57px !important;
+        left: calc(50% - 325px) !important;
+        z-index: 100000 !important;
+        background: transparent !important;
+        border: none !important;
+        color: #9ca3af !important;
+        font-size: 18px !important;
+        box-shadow: none !important;
+    }
+    @media (max-width: 768px) {
+        button[aria-label="➕"] {
+            left: 28px !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -115,12 +133,7 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Alttaki '+' butonuna basarak araçları açabilirsin!"}
     ]
 
-# --- YAZI BALONCUĞUNUN İÇİNE SABİTLENEN + MENÜSÜ HTML/CSS HİLESİ ---
-st.markdown("""
-    <div id="plus-menu-container"></div>
-""", unsafe_allow_html=True)
-
-# Streamlit popover bileşenini en alttaki inputun sol içine yerleştiriyoruz
+# --- + BUTONU VE ARAÇLAR MENÜSÜ ---
 with st.popover("➕", help="Araçlar Menüsü"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
     st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
@@ -136,27 +149,6 @@ with st.popover("➕", help="Araçlar Menüsü"):
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
         st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-# Popover butonunu tam chat inputun sol içine sabitleyen minik script
-st.markdown("""
-    <script>
-    const waitForElement = setInterval(() => {
-        const popoverBtn = document.querySelector('button[aria-label="➕"]');
-        const chatInput = document.querySelector('div[data-testid="stChatInput"]');
-        if (popoverBtn && chatInput) {
-            popoverBtn.style.position = 'fixed';
-            popoverBtn.style.bottom = '22px';
-            popoverBtn.style.left = 'calc(50% - 335px)';
-            popoverBtn.style.zIndex = '100000';
-            popoverBtn.style.background = 'transparent';
-            popoverBtn.style.border = 'none';
-            popoverBtn.style.color = '#9ca3af';
-            popoverBtn.style.fontSize = '18px';
-            clearInterval(waitForElement);
-        }
-    }, 100);
-    </script>
-""", unsafe_allow_html=True)
-
 # Eski Mesajları Göster
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
@@ -170,7 +162,7 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# Sohbet Girdisi (En altta sabit)
+# Sohbet Girdisi (En altta "Manage app" çubuğunun hemen üzerinde sabit)
 chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
