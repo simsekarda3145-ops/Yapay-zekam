@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ VE SADE ARAYÜZ CSS ---
+# --- KUSURSUZ METİN KUTUSU İÇİNE KİLİTLEME CSS & JS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,20 +34,69 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* İçerik alt çubuğun arkasında kalmasın */
     .main .block-container {
-        padding-bottom: 140px !important;
+        padding-bottom: 150px !important;
     }
 
-    /* Popover alanını derli toplu durması için hafif düzenleme */
-    div[data-testid="stPopover"] > button {
+    /* Chat Input Kutusu Tasarımı */
+    div[data-testid="stChatInput"] {
+        position: fixed !important;
+        bottom: 50px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 92% !important;
+        max-width: 700px !important;
+        z-index: 99999 !important;
         background-color: #161b22 !important;
         border: 1px solid #30363d !important;
-        border-radius: 12px !important;
+        border-radius: 28px !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7) !important;
+        padding-left: 45px !important; /* + Butonuna yer açıyoruz */
+    }
+
+    /* Kutu İçindeki Metin Alanı */
+    .stChatInputContainer textarea {
+        background: transparent !important;
         color: #ffffff !important;
-        width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Popover Butonunu Metin Kutusunun Sol İçi Yapma */
+    #plus-popover-container div[data-testid="stPopover"] {
+        position: fixed !important;
+        bottom: 54px !important;
+        z-index: 100000 !important;
+    }
+
+    #plus-popover-container div[data-testid="stPopover"] > button {
+        background: transparent !important;
+        border: none !important;
+        color: #9ca3af !important;
+        font-size: 22px !important;
+        font-weight: bold !important;
+        padding: 0px 8px !important;
+        box-shadow: none !important;
+        min-height: unset !important;
+        height: 38px !important;
+        width: 38px !important;
     }
     </style>
+
+    <script>
+    // + Butonunu sohbet kutusunun soluna hizalama JS
+    function fixPlusButton() {
+        const chatInput = document.querySelector('div[data-testid="stChatInput"]');
+        const popover = document.querySelector('#plus-popover-container div[data-testid="stPopover"]');
+        if (chatInput && popover) {
+            const rect = chatInput.getBoundingClientRect();
+            popover.style.left = (rect.left + 8) + 'px';
+            popover.style.bottom = (window.innerHeight - rect.bottom + 6) + 'px';
+        }
+    }
+    window.addEventListener('resize', fixPlusButton);
+    setInterval(fixPlusButton, 300);
+    </script>
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
@@ -97,7 +146,7 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Araçlar butonuna basarak fotoğraf yükleyebilir veya diğer özellikleri kullanabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Alttaki '+' butonuna basarak fotoğraf yükleyebilir veya diğer araçları açabilirsin!"}
     ]
 
 # Eski Mesajları Göster
@@ -113,9 +162,10 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- ARAÇLAR MENÜSÜ ---
+# --- SOL İÇTEKİ + BUTONU VE MENÜSÜ ---
 yuklenen_gorsel_objesi = None
-with st.popover("🛠️ Araçlar Menüsü (Fotoğraf / Fıkra)", help="Görsel yükle veya araçları aç"):
+st.markdown('<div id="plus-popover-container">', unsafe_allow_html=True)
+with st.popover("➕", help="Araçlar Menüsü"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
     st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
     yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
@@ -128,6 +178,7 @@ with st.popover("🛠️ Araçlar Menüsü (Fotoğraf / Fıkra)", help="Görsel 
     st.divider()
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
         st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- SOHBET INPUTU ---
 chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
