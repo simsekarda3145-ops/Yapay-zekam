@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ TEK SATIR CHAT İNPUT VE HİZALAMA CSS ---
+# --- KUSURSUZ VE SADE ARAYÜZ CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,57 +34,18 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* Mesajların alt çubuğun altında kalmaması için bırakılan boşluk */
+    /* İçerik alt çubuğun arkasında kalmasın */
     .main .block-container {
         padding-bottom: 140px !important;
     }
 
-    /* CHAT INPUT ALANINI EN ALTA SABİTLEME */
-    div[data-testid="stChatInput"] {
-        position: fixed !important;
-        bottom: 50px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 92% !important;
-        max-width: 700px !important;
-        z-index: 99999 !important;
+    /* Popover alanını derli toplu durması için hafif düzenleme */
+    div[data-testid="stPopover"] > button {
         background-color: #161b22 !important;
         border: 1px solid #30363d !important;
-        border-radius: 28px !important;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7) !important;
-        padding: 4px 8px 4px 45px !important; /* Sol tarafta + butonu için alan */
-    }
-
-    /* Girdi metin alanının arka planını şeffaf yapalım */
-    .stChatInputContainer textarea {
-        background: transparent !important;
+        border-radius: 12px !important;
         color: #ffffff !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-
-    /* + Butonunu chat kutusunun sol içine kilitleyen CSS */
-    div[data-testid="stPopover"] {
-        position: fixed !important;
-        bottom: 54px !important;
-        left: calc(50% - 330px) !important;
-        z-index: 100000 !important;
-    }
-
-    @media (max-width: 768px) {
-        div[data-testid="stPopover"] {
-            left: 25px !important;
-        }
-    }
-
-    div[data-testid="stPopover"] > button {
-        background: transparent !important;
-        border: none !important;
-        color: #9ca3af !important;
-        font-size: 20px !important;
-        box-shadow: none !important;
-        padding: 0px 8px !important;
-        height: auto !important;
+        width: 100% !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -136,7 +97,7 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sol alttaki '+' butonuna basarak araçları açabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Araçlar butonuna basarak fotoğraf yükleyebilir veya diğer özellikleri kullanabilirsin!"}
     ]
 
 # Eski Mesajları Göster
@@ -152,9 +113,9 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- SOL İÇTEKİ + BUTONU VE POP-OVER ARAÇLAR MENÜSÜ ---
+# --- ARAÇLAR MENÜSÜ ---
 yuklenen_gorsel_objesi = None
-with st.popover("➕", help="Araçlar Menüsü"):
+with st.popover("🛠️ Araçlar Menüsü (Fotoğraf / Fıkra)", help="Görsel yükle veya araçları aç"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
     st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
     yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
@@ -168,7 +129,7 @@ with st.popover("➕", help="Araçlar Menüsü"):
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
         st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-# --- TEK PARÇA SOHBET INPUTU (GÖNDER BUTONU ZATEN SAĞ İÇİNDE) ---
+# --- SOHBET INPUTU ---
 chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
