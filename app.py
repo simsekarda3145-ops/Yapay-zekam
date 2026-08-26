@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ METİN KUTUSU İÇİNE KİLİTLEME CSS & JS ---
+# --- STABİL ALT BAR CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -35,74 +35,36 @@ st.markdown("""
     }
     
     .main .block-container {
-        padding-bottom: 150px !important;
+        padding-bottom: 140px !important;
     }
 
-    /* Chat Input Kutusu Tasarımı */
+    /* Orijinal Chat Input Bileşenini Gizliyoruz */
     div[data-testid="stChatInput"] {
-        position: fixed !important;
-        bottom: 50px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 92% !important;
-        max-width: 700px !important;
-        z-index: 99999 !important;
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 28px !important;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7) !important;
-        padding-left: 45px !important; /* + Butonuna yer açıyoruz */
+        display: none !important;
     }
 
-    /* Kutu İçindeki Metin Alanı */
-    .stChatInputContainer textarea {
-        background: transparent !important;
-        color: #ffffff !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Popover Butonunu Metin Kutusunun Sol İçi Yapma */
-    #plus-popover-container div[data-testid="stPopover"] {
-        position: fixed !important;
-        bottom: 54px !important;
-        z-index: 100000 !important;
-    }
-
-    #plus-popover-container div[data-testid="stPopover"] > button {
-        background: transparent !important;
-        border: none !important;
-        color: #9ca3af !important;
-        font-size: 22px !important;
-        font-weight: bold !important;
-        padding: 0px 8px !important;
-        box-shadow: none !important;
-        min-height: unset !important;
-        height: 38px !important;
-        width: 38px !important;
+    /* Sabit Alt Bar Kapsayıcısı */
+    .fixed-bottom-bar {
+        position: fixed;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 700px;
+        z-index: 99999;
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 20px;
+        padding: 8px 12px;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.7);
     }
     </style>
-
-    <script>
-    // + Butonunu sohbet kutusunun soluna hizalama JS
-    function fixPlusButton() {
-        const chatInput = document.querySelector('div[data-testid="stChatInput"]');
-        const popover = document.querySelector('#plus-popover-container div[data-testid="stPopover"]');
-        if (chatInput && popover) {
-            const rect = chatInput.getBoundingClientRect();
-            popover.style.left = (rect.left + 8) + 'px';
-            popover.style.bottom = (window.innerHeight - rect.bottom + 6) + 'px';
-        }
-    }
-    window.addEventListener('resize', fixPlusButton);
-    setInterval(fixPlusButton, 300);
-    </script>
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
 
-# --- DOĞAL VE AKICI MICROSOFT EDGE SES FONKSİYONU ---
+# Ses Fonksiyonları
 async def generate_edge_tts(text):
     voice = "tr-TR-AhmetNeural"
     communicate = edge_tts.Communicate(text, voice)
@@ -121,7 +83,6 @@ def metni_sese_cevir(text):
     except Exception:
         return None
 
-# Görsel İndirme Fonksiyonu
 def gorsel_indir_ve_getir(prompt_text):
     try:
         seed_num = random.randint(1, 1000000)
@@ -134,22 +95,20 @@ def gorsel_indir_ve_getir(prompt_text):
     except Exception:
         return None
 
-# Görseli Base64'e Dönüştürme
 def resim_to_base64(image_file):
     buffered = BytesIO()
     image_file.save(buffered, format="JPEG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# Groq API Bağlantısı
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Alttaki '+' butonuna basarak fotoğraf yükleyebilir veya diğer araçları açabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sol taraftaki '+' butonuna basarak araçları açabilirsin!"}
     ]
 
-# Eski Mesajları Göster
+# Mesaj Geçmişi
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
@@ -162,32 +121,40 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- SOL İÇTEKİ + BUTONU VE MENÜSÜ ---
+# --- YAN YANA HİZALANMIŞ EN ALT BAR ---
 yuklenen_gorsel_objesi = None
-st.markdown('<div id="plus-popover-container">', unsafe_allow_html=True)
-with st.popover("➕", help="Araçlar Menüsü"):
-    st.markdown("### 🛠️ Şimşek Zeka Araçları")
-    st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-    yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-    
-    if yuklenen_dosya:
-        yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-        st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-        st.success("Görsel yüklendi kanka!")
 
-    st.divider()
-    if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
-        st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+st.markdown('<div class="fixed-bottom-bar">', unsafe_allow_html=True)
+col_plus, col_input = st.columns([1, 6])
+
+with col_plus:
+    with st.popover("➕", help="Araçlar Menüsü"):
+        st.markdown("### 🛠️ Şimşek Zeka Araçları")
+        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+        
+        if yuklenen_dosya:
+            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+            st.success("Görsel yüklendi kanka!")
+
+        st.divider()
+        if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
+            st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+
+with col_input:
+    with st.form(key="chat_bar_form", clear_on_submit=True):
+        user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor veya '...çiz' de...", label_visibility="collapsed")
+        submitted = st.form_submit_button("Gönder 🚀")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- SOHBET INPUTU ---
-chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
-
-if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
+# Mantık İşleme
+prompt = ""
+if submitted and user_input:
+    prompt = user_input
+elif "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
     prompt = st.session_state.fikra_isteği
     st.session_state.fikra_isteği = None
-else:
-    prompt = chat_input_text
 
 if prompt or yuklenen_gorsel_objesi is not None:
     girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
@@ -200,7 +167,6 @@ if prompt or yuklenen_gorsel_objesi is not None:
     is_image_request = any(kelime in prompt_lower for kelime in gorsel_kelimeleri)
 
     with st.chat_message("assistant"):
-        # 1. FOTOĞRAF ANALİZ ETME
         if yuklenen_gorsel_objesi is not None:
             with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 if client:
@@ -232,7 +198,6 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
-        # 2. Pekmez Kontrolü
         elif "pekmez" in prompt_lower:
             try:
                 img = Image.open("CutPaste_2026-05-26_22-53-22-862.jpg")
@@ -243,7 +208,6 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 st.error(hata_msg)
                 st.session_state.messages.append({"role": "assistant", "content": hata_msg, "type": "text"})
 
-        # 3. Resim Çizdirme
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 img_data = gorsel_indir_ve_getir(girdi_metni)
@@ -253,7 +217,6 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 else:
                     st.error("Kanka resim servisi şu an yoğun, tekrar dene!")
 
-        # 4. Normal Metin Sohbeti
         else:
             with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 if client:
