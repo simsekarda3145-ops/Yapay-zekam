@@ -17,7 +17,6 @@ st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="cent
 # --- GELİŞMİŞ CSS VE EN ALTA SABİTLEME ---
 st.markdown("""
     <style>
-    /* Arka Plan ve Yazı Rengi */
     .stApp { 
         background-color: #0e1117 !important; 
         color: #ffffff !important; 
@@ -25,8 +24,6 @@ st.markdown("""
     h1, h2, h3, p, span, label, div {
         color: #ffffff !important;
     }
-
-    /* Chat Balonları */
     .stChatMessage {
         background-color: #1a1f2c !important;
         border-radius: 16px;
@@ -37,8 +34,6 @@ st.markdown("""
     .stChatMessage p {
         color: #f0f2f5 !important;
     }
-
-    /* EN ALT BAR (HAP TASARIMI VE ALT ALANA SABİTLEME) */
     div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
         background-color: #1e2430 !important;
         border: 1px solid #374151 !important;
@@ -54,8 +49,6 @@ st.markdown("""
         max-width: 700px !important;
         z-index: 9999 !important;
     }
-
-    /* '+' Butonu Tasarımı */
     div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
         background: transparent !important;
         border: none !important;
@@ -69,8 +62,6 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
         color: #ffffff !important;
     }
-
-    /* Chat Input Temizleme */
     .stChatInputContainer {
         border: none !important;
         background: transparent !important;
@@ -83,8 +74,6 @@ st.markdown("""
         box-shadow: none !important;
         padding-left: 5px !important;
     }
-
-    /* Chat alanının alt çubuk arkasında kalmaması için alt boşluk */
     .main .block-container {
         padding-bottom: 120px !important;
     }
@@ -273,7 +262,7 @@ if prompt or yuklenen_gorsel_objesi:
                         ]
                         
                         response = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
+                            model="llama-3.1-8b-instant",
                             messages=[
                                 {
                                     "role": "system", 
