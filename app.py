@@ -25,17 +25,17 @@ st.markdown("""
         border: 1px solid #2d3748;
     }
     
-    /* Sayfa alt boşluğu (Chat kutusunun içeriği kapatmaması için) */
+    /* Sayfa alt boşluğu */
     .main .block-container { padding-bottom: 180px !important; }
 
-    /* Popover (Araçlar Butonu) Özel Hizalama CSS */
+    /* Popover (Araçlar Butonu) - Küçültülmüş ve Yukarı Alınmış CSS */
     div[data-testid="stPopover"] {
         position: fixed !important;
-        bottom: 85px !important;
+        bottom: 100px !important;  /* Biraz daha yukarı çekildi */
         left: 50% !important;
         transform: translateX(-50%) !important;
-        width: 90% !important;
-        max-width: 700px !important;
+        width: auto !important;     /* Genişlik içeriğe göre küçültüldü */
+        max-width: 220px !important;
         z-index: 99999 !important;
     }
 
@@ -43,9 +43,11 @@ st.markdown("""
         width: 100% !important;
         background-color: #161b22 !important;
         border: 1px solid #30363d !important;
-        border-radius: 12px !important;
+        border-radius: 20px !important;
         color: #00f2fe !important;
         font-weight: bold !important;
+        padding: 4px 12px !important;
+        font-size: 13px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -108,9 +110,9 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# Araçlar Menüsü (Chat Kutumuzun Tam Üstüne Sabitlendi)
+# Araçlar Menüsü (Küçültülmüş ve Yukarı Sabitlenmiş Düğme)
 yuklenen_gorsel_objesi = None
-with st.popover("➕ Şimşek Araçlar Menüsü", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
+with st.popover("➕ Araçlar", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
     yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
     if yuklenen_dosya:
@@ -122,7 +124,7 @@ with st.popover("➕ Şimşek Araçlar Menüsü", help="Fotoğraf Yükle veya H�
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
         st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-# Standart Chat Input (Telefon Klavesindeki Enter %100 Çalışır)
+# Standart Chat Input
 prompt = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
