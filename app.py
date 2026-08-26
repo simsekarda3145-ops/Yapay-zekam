@@ -34,17 +34,17 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* Sayfanın altındaki içeriklerin kapanmaması için boşluk */
+    /* Sayfa alt boşluğu */
     .main .block-container {
         padding-bottom: 140px !important;
     }
 
-    /* Streamlit'in kendi orijinal inputunu gizliyoruz */
+    /* Orijinal St.ChatInput gizli */
     div[data-testid="stChatInput"] {
         display: none !important;
     }
 
-    /* BURASI ÇOK ÖNEMLİ: Tüm alt barı tek bir şık metin baloncuğuna çeviriyoruz */
+    /* Tek parça alt bar */
     .custom-chat-container {
         position: fixed !important;
         bottom: 20px !important;
@@ -58,9 +58,12 @@ st.markdown("""
         border-radius: 28px !important;
         padding: 6px 12px !important;
         box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.8) !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
+    }
+
+    /* Input içindeki kenarlıkları temizle */
+    div[data-baseweb="input"] {
+        background-color: transparent !important;
+        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -125,35 +128,36 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- TEK PARÇA SABİT METİN BALONCUĞU ---
+# --- ALT MİMARİ (+ MENÜSÜ VE ENTER DESTEKLİ FORM) ---
 yuklenen_gorsel_objesi = None
 
 st.markdown('<div class="custom-chat-container">', unsafe_allow_html=True)
+col_plus, col_form = st.columns([0.15, 0.85])
 
-# Form yapısı sayesinde klavyeden enter'a basınca veya gönder butonuna dokununca çalışır
-with st.form(key="chat_form", clear_on_submit=True):
-    col1, col2, col3 = st.columns([0.15, 0.70, 0.15])
-    
-    with col1:
-        with st.popover("➕", help="Araçlar Menüsü"):
-            st.markdown("### 🛠️ Şimşek Zeka Araçları")
-            st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-            yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-            
-            if yuklenen_dosya:
-                yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-                st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-                st.success("Görsel yüklendi kanka!")
+# Popover form dışında durduğu için hata vermeyecek
+with col_plus:
+    with st.popover("➕", help="Araçlar Menüsü"):
+        st.markdown("### 🛠️ Şimşek Zeka Araçları")
+        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+        
+        if yuklenen_dosya:
+            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+            st.success("Görsel yüklendi kanka!")
 
-            st.divider()
-            if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
-                st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+        st.divider()
+        if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
+            st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-    with col2:
-        user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="chat_input_box")
-
-    with col3:
-        submitted = st.form_submit_button("🚀", use_container_width=True)
+# Form sadece girdi alanı ve küçük gönder butonunu kapsar (Klavyeden Enter çalışır)
+with col_form:
+    with st.form(key="chat_input_form", clear_on_submit=True):
+        col_in, col_btn = st.columns([0.8, 0.2])
+        with col_in:
+            user_input = st.text_input("Mesaj", placeholder="Şimşek Zeka'ya sor...", label_visibility="collapsed", key="chat_input_box")
+        with col_btn:
+            submitted = st.form_submit_button("🚀", use_container_width=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
