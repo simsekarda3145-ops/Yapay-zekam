@@ -13,7 +13,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- KUSURSUZ EN ALTA SABİTLENMİŞ CHAT VE + MENÜSÜ CSS & HTML ---
+# --- CHAT INPUT İÇİNE + BUTONU ENTEGRE EDEN ÖZEL CSS ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,25 +34,33 @@ st.markdown("""
         color: #f0f2f5 !important;
     }
     
-    /* Sayfa içeriğinin alttaki sabit bara takılmaması için boşluk */
+    /* İçerik alttaki sabit bara çarpmasın diye alt boşluk */
     .main .block-container {
-        padding-bottom: 150px !important;
+        padding-bottom: 140px !important;
     }
-    
-    /* Streamlit'in orijinal input alanını gizleyip kendi özel alt barımızı oturtuyoruz */
+
+    /* Streamlit Chat Input Alanını En Alta Sabitleme */
     div[data-testid="stChatInput"] {
         position: fixed !important;
         bottom: 15px !important;
         left: 50% !important;
-        transform: translateX(-50% ) !important;
+        transform: translateX(-50%) !important;
         width: 92% !important;
         max-width: 700px !important;
         z-index: 99999 !important;
         background-color: #161b22 !important;
         border: 1px solid #30363d !important;
         border-radius: 24px !important;
-        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.5) !important;
-        padding: 4px 12px !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.6) !important;
+        padding: 4px 8px 4px 45px !important; /* Sol tarafta + butonu için boşluk bıraktık */
+    }
+
+    /* stChatInput içindeki metin alanı */
+    .stChatInputContainer textarea {
+        background: transparent !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -104,11 +112,17 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Sol alttaki '+' butonuna basarak foto yükleyebilir veya fıkra isteyebilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Alttaki '+' butonuna basarak araçları açabilirsin!"}
     ]
 
-# Ekstra Araçlar İçin Expandable / Buton Alanı (Üst Kısımda Kolay Erişim)
-with st.expander("➕ Ekstra Araçlar (Fotoğraf Yükle & Hızlı Menü)", expanded=False):
+# --- YAZI BALONCUĞUNUN İÇİNE SABİTLENEN + MENÜSÜ HTML/CSS HİLESİ ---
+st.markdown("""
+    <div id="plus-menu-container"></div>
+""", unsafe_allow_html=True)
+
+# Streamlit popover bileşenini en alttaki inputun sol içine yerleştiriyoruz
+with st.popover("➕", help="Araçlar Menüsü"):
+    st.markdown("### 🛠️ Şimşek Zeka Araçları")
     st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
     yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
     
@@ -116,11 +130,32 @@ with st.expander("➕ Ekstra Araçlar (Fotoğraf Yükle & Hızlı Menü)", expan
     if yuklenen_dosya:
         yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
         st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-        st.success("Görsel yüklendi kanka! Şimdi aşağıdan mesajını yaz.")
+        st.success("Görsel yüklendi kanka!")
 
     st.divider()
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
         st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+
+# Popover butonunu tam chat inputun sol içine sabitleyen minik script
+st.markdown("""
+    <script>
+    const waitForElement = setInterval(() => {
+        const popoverBtn = document.querySelector('button[aria-label="➕"]');
+        const chatInput = document.querySelector('div[data-testid="stChatInput"]');
+        if (popoverBtn && chatInput) {
+            popoverBtn.style.position = 'fixed';
+            popoverBtn.style.bottom = '22px';
+            popoverBtn.style.left = 'calc(50% - 335px)';
+            popoverBtn.style.zIndex = '100000';
+            popoverBtn.style.background = 'transparent';
+            popoverBtn.style.border = 'none';
+            popoverBtn.style.color = '#9ca3af';
+            popoverBtn.style.fontSize = '18px';
+            clearInterval(waitForElement);
+        }
+    }, 100);
+    </script>
+""", unsafe_allow_html=True)
 
 # Eski Mesajları Göster
 for i, message in enumerate(st.session_state.messages):
@@ -135,10 +170,9 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# Sohbet Girdisi (Streamlit otomatik olarak en alta sabitler)
+# Sohbet Girdisi (En altta sabit)
 chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
-# Fıkra butonuna basıldıysa onu girdi yapalım
 if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
     prompt = st.session_state.fikra_isteği
     st.session_state.fikra_isteği = None
