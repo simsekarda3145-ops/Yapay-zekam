@@ -240,11 +240,6 @@ if prompt or yuklenen_gorsel_objesi:
 
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
-                
-                if st.button("🔊 Sesli Dinle", key=f"listen_new_{len(st.session_state.messages)}"):
-                    audio_html = metni_sese_cevir(cevap)
-                    if audio_html:
-                        st.components.v1.html(audio_html, height=0)
 
         # 2. Pekmez Kontrolü
         elif "pekmez" in prompt_lower:
@@ -278,7 +273,7 @@ if prompt or yuklenen_gorsel_objesi:
                         ]
                         
                         response = client.chat.completions.create(
-                            model="llama-3.1-8b-instant",
+                            model="llama-3.3-70b-versatile",
                             messages=[
                                 {
                                     "role": "system", 
