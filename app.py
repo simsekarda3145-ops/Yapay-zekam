@@ -14,7 +14,7 @@ import edge_tts
 # Sayfa Ayarları
 st.set_page_config(page_title="Şimşek Zeka ⚡", page_icon="⚡", layout="centered")
 
-# --- GELİŞMİŞ CSS VE EN ALTA KUSURSUZ SABİTLEME ---
+# --- ÖZEL STİL VE GÖRSEL DÜZENLEME ---
 st.markdown("""
     <style>
     .stApp { 
@@ -34,53 +34,8 @@ st.markdown("""
     .stChatMessage p {
         color: #f0f2f5 !important;
     }
-    
-    /* İŞARETLEDİĞİN YERİ (YAZMA ALANI VE + MENÜSÜ) EN ALTA SABİTLEME */
-    div[data-testid="stHorizontalBlock"]:has(button[aria-label="➕"]) {
-        background-color: #1e2430 !important;
-        border: 1px solid #374151 !important;
-        border-radius: 30px !important;
-        padding: 4px 12px !important;
-        display: flex !important;
-        align-items: center !important;
-        position: fixed !important;
-        bottom: 50px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 94% !important;
-        max-width: 700px !important;
-        z-index: 99999 !important;
-        box-shadow: 0px -4px 20px rgba(0,0,0,0.6) !important;
-    }
-
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        background: transparent !important;
-        border: none !important;
-        color: #9ca3af !important;
-        font-size: 20px !important;
-        padding: 0px !important;
-        height: auto !important;
-        width: 38px !important;
-        box-shadow: none !important;
-    }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-        color: #ffffff !important;
-    }
-    .stChatInputContainer {
-        border: none !important;
-        background: transparent !important;
-        padding: 0 !important;
-    }
-    .stChatInputContainer textarea {
-        background: transparent !important;
-        color: #ffffff !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding-left: 5px !important;
-    }
-    /* Mesajların alt çubuğun altında kalmaması için bırakılan boşluk */
     .main .block-container {
-        padding-bottom: 140px !important;
+        padding-bottom: 100px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -132,10 +87,32 @@ client = Groq(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ '+ ' butonuna basarak foto yükleyebilir veya sesli konuşabilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Yan taraftaki araçlar menüsünden foto yükleyebilir veya sesli konuşabilirsin!"}
     ]
 
-# Eski Mesajları ve Dinleme Butonlarını Göster
+# Sidebar (Araçlar Menüsü - Telefon için en stabil ve kullanışlı yer)
+with st.sidebar:
+    st.markdown("### 🛠️ Şimşek Zeka Araçları")
+    st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
+    yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
+    
+    yuklenen_gorsel_objesi = None
+    if yuklenen_dosya:
+        yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
+        st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
+        st.success("Görsel yüklendi kanka!")
+
+    st.divider()
+    st.write("🎙️ **Sesli Konuş:**")
+    sesli_girdi = speech_to_text(
+        language='tr', 
+        start_prompt="🎙️ Mikrofona Bas", 
+        stop_prompt="⏹️ Durdur", 
+        just_once=True,
+        key='STT_SIDEBAR'
+    )
+
+# Eski Mesajları Göster
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
@@ -148,48 +125,10 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# --- EKRANIN EN ALTINA SABİTLENMİŞ YAZMA ALANI VE '+' MENÜSÜ ---
-ekran_mesaji = None
-yuklenen_gorsel_objesi = None
+# --- STREAMLIT'İN KENDİSİNİN EN ALTA SABİTLEDİĞİ SOHBET GİRDİSİ ---
+chat_input_text = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
-col_plus, col_input = st.columns([1, 8])
-
-with col_plus:
-    with st.popover("➕", help="Fotoğraf Yükle veya Sesli Konuş"):
-        st.markdown("### 🛠️ Araçlar")
-        
-        # 1. Sesli Dinleme
-        st.write("🎙️ **Sesli Konuş:**")
-        sesli_girdi = speech_to_text(
-            language='tr', 
-            start_prompt="🎙️ Mikrofona Bas", 
-            stop_prompt="⏹️ Durdur", 
-            just_once=True,
-            key='STT_POP'
-        )
-        if sesli_girdi:
-            ekran_mesaji = sesli_girdi
-            
-        st.divider()
-
-        # 2. Görsel Yükleme / Fotoğraf Analizi
-        st.write("📷 **Fotoğraf Yükle & Analiz Et:**")
-        yuklenen_dosya = st.file_uploader("Bir görsel seç veya çek", type=["jpg", "jpeg", "png"])
-        if yuklenen_dosya:
-            yuklenen_gorsel_objesi = Image.open(yuklenen_dosya)
-            st.image(yuklenen_gorsel_objesi, caption="Yüklenen Fotoğraf", use_container_width=True)
-            st.success("Görsel yüklendi kanka!")
-
-        st.divider()
-        
-        # 3. Hızlı Kısayollar
-        if st.button("🎭 Fıkra Anlat"):
-            ekran_mesaji = "Bana komik bir fıkra anlat kanka!"
-
-with col_input:
-    prompt_input = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
-
-prompt = prompt_input or ekran_mesaji
+prompt = chat_input_text or sesli_girdi
 
 if prompt or yuklenen_gorsel_objesi:
     girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka, detaylıca anlatır mısın?"
@@ -208,7 +147,6 @@ if prompt or yuklenen_gorsel_objesi:
                 if client:
                     try:
                         base64_image = resim_to_base64(yuklenen_gorsel_objesi)
-                        
                         response = client.chat.completions.create(
                             model="openai/gpt-oss-20b",
                             messages=[
