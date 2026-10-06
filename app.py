@@ -1,7 +1,7 @@
 import os
 import urllib.parse
 import streamlit as st
-from groq import Groq
+from google import genai
 from PIL import Image
 import base64
 import requests
@@ -28,10 +28,10 @@ st.markdown("""
     /* Sayfa alt boşluğu */
     .main .block-container { padding-bottom: 200px !important; }
 
-    /* Popover (Araçlar Butonu) - Biraz Daha Yukarıda CSS */
+    /* Popover (Araçlar Butonu) - Sabitlenmiş CSS */
     div[data-testid="stPopover"] {
         position: fixed !important;
-        bottom: 125px !important;  /* Biraz daha yukarı çekildi */
+        bottom: 125px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: auto !important;
@@ -53,7 +53,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Groq & Vision AI Altyapısı ile Güçlendirildi 🚀")
+st.caption("Google Gemini AI Altyapısı ile Güçlendirildi 🚀")
 
 async def generate_edge_tts(text):
     voice = "tr-TR-AhmetNeural"
@@ -85,23 +85,22 @@ def gorsel_indir_ve_getir(prompt_text):
     except Exception:
         return None
 
-def resim_to_base64(image_file):
-    buffered = BytesIO()
-    image_file.save(buffered, format="JPEG")
-    return base64.b64encode(buffered.getvalue()).decode('utf-8')
-
-api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
-client = Groq(api_key=api_key) if api_key else None
+# GEMINI CLIENT BAĞLANTISI
+api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Üstteki Araçlar butonuna basarak fotoğraf yükleyebilirsin!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Gemini altyapısıyla buradayım, fotoğraflarını da inceleyebilirim!"}
     ]
 
 for i, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message.get("type") == "image":
-            st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
+            if isinstance(message["content"], str) and os.path.exists(message["content"]):
+                st.image(message["content"], caption="Özel Görsel 🍯⚡", use_container_width=True)
+            else:
+                st.image(message["content"], caption="Şimşek Zeka Çizimi 🎨⚡", use_container_width=True)
         else:
             st.markdown(message["content"])
             if message["role"] == "assistant" and isinstance(message["content"], str):
@@ -110,7 +109,7 @@ for i, message in enumerate(st.session_state.messages):
                     if audio_html:
                         st.components.v1.html(audio_html, height=0)
 
-# Araçlar Menüsü (Daha Yukarıya Sabitlendi)
+# Araçlar Menüsü
 yuklenen_gorsel_objesi = None
 with st.popover("➕ Araçlar", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
     st.markdown("### 🛠️ Şimşek Zeka Araçları")
@@ -124,7 +123,7 @@ with st.popover("➕ Araçlar", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
         st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
 
-# Standart Chat Input
+# Chat Input
 prompt = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
 if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
@@ -141,29 +140,38 @@ if prompt or yuklenen_gorsel_objesi is not None:
     is_image_request = any(k in prompt_lower for k in ["çiz", "resim", "görsel", "tasarla"])
 
     with st.chat_message("assistant"):
+        # 1. Gemini ile Fotoğraf Analizi (Vision)
         if yuklenen_gorsel_objesi is not None:
-            with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
+            with st.spinner("Şimşek Zeka (Gemini Vision) fotoğrafı inceliyor... 👁️⚡"):
                 if client:
                     try:
-                        base64_image = resim_to_base64(yuklenen_gorsel_objesi)
-                        response = client.chat.completions.create(
-                            model="openai/gpt-oss-20b",
-                            messages=[{
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": f"Fotoğrafla ilgili şu soruya cevap ver: {girdi_metni}"},
-                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                                ]
-                            }]
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=[
+                                yuklenen_gorsel_objesi,
+                                f"Senin adın Şimşek Zeka. Kullanıcıya kanka diye hitap et. Fotoğrafla ilgili soru: {girdi_metni}"
+                            ]
                         )
-                        cevap = response.choices[0].message.content
+                        cevap = response.text
                     except Exception as e:
                         cevap = f"Hata oluştu kanka: {e}"
                 else:
-                    cevap = "API Key eksik kanka!"
+                    cevap = "Gemini API Key eksik kanka!"
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
+        # 2. Özel "Pekmez" Kontrolü 🍯
+        elif "pekmez" in prompt_lower:
+            pekmez_dosyasi = "pekmez.jpg"
+            if os.path.exists(pekmez_dosyasi):
+                st.image(pekmez_dosyasi, caption="Özel Pekmez Görseli 🍯⚡", use_container_width=True)
+                st.session_state.messages.append({"role": "assistant", "content": pekmez_dosyasi, "type": "image"})
+            else:
+                cevap = f"Kanka 'pekmez' dedin ama klasörde `{pekmez_dosyasi}` dosyasını bulamadım."
+                st.markdown(cevap)
+                st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
+
+        # 3. Resim Çizim İsteği
         elif is_image_request:
             with st.spinner("Şimşek Zeka resmini çiziyor... 🎨⚡"):
                 img_data = gorsel_indir_ve_getir(girdi_metni)
@@ -173,22 +181,22 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 else:
                     st.error("Resim servisi yoğun kanka!")
 
+        # 4. Gemini Metin Sohbeti
         else:
-            with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
+            with st.spinner("Şimşek Zeka (Gemini) düşünüyor... ⚡🧠"):
                 if client:
                     try:
-                        temiz_gecmis = [{"role": m["role"], "content": str(m["content"])} for m in st.session_state.messages if m.get("type") != "image"]
-                        response = client.chat.completions.create(
-                            model="openai/gpt-oss-20b",
-                            messages=[
-                                {"role": "system", "content": "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi. Kullanıcıya 'kanka' diye hitap et."},
-                                *temiz_gecmis
-                            ]
+                        system_instruction = "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi. Kullanıcıya samimi bir şekilde 'kanka' diye hitap et."
+                        prompt_full = f"{system_instruction}\n\nKullanıcı: {girdi_metni}"
+                        
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt_full
                         )
-                        cevap = response.choices[0].message.content
+                        cevap = response.text
                     except Exception as e:
-                        cevap = f"Hata: {e}"
+                        cevap = f"Hata oluştu kanka: {e}"
                 else:
-                    cevap = "API Key eksik kanka!"
+                    cevap = "Gemini API Key bulunamadı kanka!"
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
