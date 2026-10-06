@@ -1,4 +1,5 @@
 import os
+import time
 import urllib.parse
 import streamlit as st
 from google import genai
@@ -90,26 +91,34 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
 def gemini_cevap_al(contents_data):
-    """Google'ın belirttiği yeni 'gemini-3.8-flash' modelini kullanır."""
+    """503 yoğunluk hatalarında otomatik tekrar dener ve alternatif modelleri devreye sokar."""
     if not client:
         return "Gemini API Key bulunamadı kanka!"
     
-    # Google'ın hesabın için şart koştuğu güncel model
-    modeller = ['gemini-3.8-flash']
-    hatalar = []
+    # Sırayla denenecek modeller
+    modeller = ['gemini-3.8-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash']
     
     for model_adi in modeller:
-        try:
-            response = client.models.generate_content(
-                model=model_adi,
-                contents=contents_data
-            )
-            return response.text
-        except Exception as e:
-            hatalar.append(f"{model_adi}: {str(e)}")
-            continue
-            
-    return f"Hata oluştu kanka: {' | '.join(hatalar)}"
+        # 503 gibi anlık yoğunluk hatalarında 3 kere tekrar dene
+        for deneme in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model_adi,
+                    contents=contents_data
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                err_str = str(e)
+                # Eğer sunucu yoğunluğu (503) varsa 2 saniye bekle tekrar dene
+                if "503" in err_str or "UNAVAILABLE" in err_str:
+                    time.sleep(2)
+                    continue
+                else:
+                    # Başka bir hataysa doğrudan sonraki modele geç
+                    break
+                    
+    return "Şu an Google sunucuları aşırı yoğun kanka, birkaç saniye sonra tekrar 'Selam' yazıp dene!"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
