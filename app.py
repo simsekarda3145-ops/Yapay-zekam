@@ -91,34 +91,29 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
 def gemini_cevap_al(contents_data):
-    """503 yoğunluk hatalarında otomatik tekrar dener ve alternatif modelleri devreye sokar."""
+    """Google'ın aktif gemini-3.8-flash modelini kullanır, 503 yoğunluk hatası verirse pes etmeyip otomatik tekrar dener."""
     if not client:
         return "Gemini API Key bulunamadı kanka!"
     
-    # Sırayla denenecek modeller
-    modeller = ['gemini-3.8-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash']
+    model_adi = 'gemini-3.8-flash'
+    son_hata = ""
     
-    for model_adi in modeller:
-        # 503 gibi anlık yoğunluk hatalarında 3 kere tekrar dene
-        for deneme in range(3):
-            try:
-                response = client.models.generate_content(
-                    model=model_adi,
-                    contents=contents_data
-                )
-                if response and response.text:
-                    return response.text
-            except Exception as e:
-                err_str = str(e)
-                # Eğer sunucu yoğunluğu (503) varsa 2 saniye bekle tekrar dene
-                if "503" in err_str or "UNAVAILABLE" in err_str:
-                    time.sleep(2)
-                    continue
-                else:
-                    # Başka bir hataysa doğrudan sonraki modele geç
-                    break
-                    
-    return "Şu an Google sunucuları aşırı yoğun kanka, birkaç saniye sonra tekrar 'Selam' yazıp dene!"
+    # 503 yoğunluk hatalarında pes etmeden 4 kere arka arkaya dene
+    for deneme in range(4):
+        try:
+            response = client.models.generate_content(
+                model=model_adi,
+                contents=contents_data
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            son_hata = str(e)
+            # Anlık yoğunluk (503 / UNAVAILABLE) veya bağlantı hatalarında 2 saniye bekle ve tekrar dene
+            time.sleep(2.5)
+            continue
+            
+    return f"Gemini Bağlantı Hatası: {son_hata}"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
