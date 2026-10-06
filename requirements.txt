@@ -1,6 +1,5 @@
 streamlit
-groq
-Pillow
+google-genai
+pillow
 requests
-streamlit-mic-recorder
 edge-tts
