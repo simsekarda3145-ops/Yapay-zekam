@@ -90,13 +90,13 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
 def gemini_cevap_al(contents_data):
-    """Sırayla aktif Gemini modellerini dener ve hata durumunda detay verir."""
+    """Yeni google-genai kütüphanesiyle uyumlu geçerli modelleri dener."""
     if not client:
         return "Gemini API Key bulunamadı kanka!"
     
-    # Aktif ve stabil çalışan Gemini modelleri
-    modeller = ['gemini-2.5-flash', 'gemini-1.5-flash']
-    son_hata = ""
+    # google-genai SDK tarafından desteklenen güncel model isimleri
+    modeller = ['gemini-2.5-flash', 'gemini-2.0-flash']
+    hatalar = []
     
     for model_adi in modeller:
         try:
@@ -106,10 +106,10 @@ def gemini_cevap_al(contents_data):
             )
             return response.text
         except Exception as e:
-            son_hata = str(e)
-            continue  # Bu modelde hata aldıysa yedek modeli dene
+            hatalar.append(f"{model_adi}: {str(e)}")
+            continue
             
-    return f"Hata oluştu kanka: {son_hata}"
+    return f"Hata oluştu kanka: {' | '.join(hatalar)}"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
