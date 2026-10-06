@@ -89,6 +89,26 @@ def gorsel_indir_ve_getir(prompt_text):
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
+def gemini_cevap_al(contents_data):
+    """Ana model meşgulse otomatik yedek modele geçer."""
+    if not client:
+        return "Gemini API Key bulunamadı kanka!"
+    
+    # Sırasıyla denecek modeller
+    modeller = ['gemini-2.5-flash', 'gemini-1.5-flash']
+    
+    for model_adi in modeller:
+        try:
+            response = client.models.generate_content(
+                model=model_adi,
+                contents=contents_data
+            )
+            return response.text
+        except Exception:
+            continue  # Hata alırsa sonraki modeli dene
+            
+    return "Şu an Google sunucuları çok yoğun kanka, birkaç saniye sonra tekrar dener misin? ⚡"
+
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Gemini altyapısıyla buradayım, fotoğraflarını da inceleyebilirim!"}
@@ -143,20 +163,11 @@ if prompt or yuklenen_gorsel_objesi is not None:
         # 1. Gemini ile Fotoğraf Analizi (Vision)
         if yuklenen_gorsel_objesi is not None:
             with st.spinner("Şimşek Zeka (Gemini Vision) fotoğrafı inceliyor... 👁️⚡"):
-                if client:
-                    try:
-                        response = client.models.generate_content(
-                            model='gemini-3.8-flash',
-                            contents=[
-                                yuklenen_gorsel_objesi,
-                                f"Senin adın Şimşek Zeka. Kullanıcıya kanka diye hitap et. Fotoğrafla ilgili soru: {girdi_metni}"
-                            ]
-                        )
-                        cevap = response.text
-                    except Exception as e:
-                        cevap = f"Hata oluştu kanka: {e}"
-                else:
-                    cevap = "Gemini API Key eksik kanka!"
+                icerik = [
+                    yuklenen_gorsel_objesi,
+                    f"Senin adın Şimşek Zeka. Kullanıcıya kanka diye hitap et. Fotoğrafla ilgili soru: {girdi_metni}"
+                ]
+                cevap = gemini_cevap_al(icerik)
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
 
@@ -184,19 +195,9 @@ if prompt or yuklenen_gorsel_objesi is not None:
         # 4. Gemini Metin Sohbeti
         else:
             with st.spinner("Şimşek Zeka (Gemini) düşünüyor... ⚡🧠"):
-                if client:
-                    try:
-                        system_instruction = "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi. Kullanıcıya samimi bir şekilde 'kanka' diye hitap et."
-                        prompt_full = f"{system_instruction}\n\nKullanıcı: {girdi_metni}"
-                        
-                        response = client.models.generate_content(
-                            model='gemini-3.8-flash',
-                            contents=prompt_full
-                        )
-                        cevap = response.text
-                    except Exception as e:
-                        cevap = f"Hata oluştu kanka: {e}"
-                else:
-                    cevap = "Gemini API Key bulunamadı kanka!"
+                system_instruction = "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi. Kullanıcıya samimi bir şekilde 'kanka' diye hitap et."
+                prompt_full = f"{system_instruction}\n\nKullanıcı: {girdi_metni}"
+                
+                cevap = gemini_cevap_al(prompt_full)
                 st.markdown(cevap)
                 st.session_state.messages.append({"role": "assistant", "content": cevap, "type": "text"})
