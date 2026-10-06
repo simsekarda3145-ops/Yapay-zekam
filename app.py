@@ -90,12 +90,12 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
 def gemini_cevap_al(contents_data):
-    """Yeni google-genai kütüphanesiyle uyumlu geçerli modelleri dener."""
+    """Google'ın belirttiği yeni 'gemini-3.8-flash' modelini kullanır."""
     if not client:
         return "Gemini API Key bulunamadı kanka!"
     
-    # google-genai SDK tarafından desteklenen güncel model isimleri
-    modeller = ['gemini-2.5-flash', 'gemini-2.0-flash']
+    # Google'ın hesabın için şart koştuğu güncel model
+    modeller = ['gemini-3.8-flash']
     hatalar = []
     
     for model_adi in modeller:
