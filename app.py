@@ -3,6 +3,7 @@ import time
 import urllib.parse
 import streamlit as st
 from google import genai
+from google.genai import types
 from PIL import Image
 import base64
 import requests
@@ -26,10 +27,8 @@ st.markdown("""
         border: 1px solid #2d3748;
     }
     
-    /* Sayfa alt boşluğu */
     .main .block-container { padding-bottom: 200px !important; }
 
-    /* Popover (Araçlar Butonu) - Sabitlenmiş CSS */
     div[data-testid="stPopover"] {
         position: fixed !important;
         bottom: 125px !important;
@@ -54,7 +53,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
-st.caption("Google Gemini AI Altyapısı ile Güçlendirildi 🚀")
+st.caption("Şimşek Zeka AI Altyapısı ile Güçlendirildi 🚀")
 
 async def generate_edge_tts(text):
     voice = "tr-TR-AhmetNeural"
@@ -79,7 +78,7 @@ def gorsel_indir_ve_getir(prompt_text):
         seed_num = random.randint(1, 1000000)
         encoded_text = urllib.parse.quote(prompt_text)
         url = f"https://image.pollinations.ai/prompt/{encoded_text}?width=1024&height=1024&nologo=true&seed={seed_num}"
-        response = requests.get(url, timeout=15)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             return Image.open(BytesIO(response.content))
         return None
@@ -91,35 +90,39 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
 def gemini_cevap_al(contents_data):
-    """503 yoğunluk hatalarında pes etmeden kademeli bekleme ve tekrar deneme yapar."""
+    """Sert zaman aşımı (timeout) ve hızlı deneme ile çalışır."""
     if not client:
-        return "Gemini API Key bulunamadı kanka!"
+        return "API Key bulunamadı kanka!"
     
-    model_adi = 'gemini-3.8-flash'
-    bekleme_sureleri = [1, 2, 4, 6]
-    son_hata = ""
+    config = types.GenerateContentConfig(
+        http_options=types.HttpOptions(timeout=6000)
+    )
 
-    for bekleme in bekleme_sureleri:
-        try:
-            response = client.models.generate_content(
-                model=model_adi,
-                contents=contents_data
-            )
-            if response and response.text:
-                return response.text
-        except Exception as e:
-            son_hata = str(e)
-            if "503" in son_hata or "UNAVAILABLE" in son_hata:
-                time.sleep(bekleme)
-                continue
-            else:
-                break
+    denenecek_modeller = ['gemini-3.8-flash', 'gemini-2.5-flash']
+    
+    for model_adi in denenecek_modeller:
+        for bekleme in [1, 2]:
+            try:
+                response = client.models.generate_content(
+                    model=model_adi,
+                    contents=contents_data,
+                    config=config
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                err_msg = str(e)
+                if "503" in err_msg or "UNAVAILABLE" in err_msg or "429" in err_msg or "timeout" in err_msg.lower():
+                    time.sleep(bekleme)
+                    continue
+                else:
+                    break
 
-    return "Google sunucuları şu an dünya genelinde aşırı yoğun kanka (503). Lütfen birkaç saniye sonra tekrar yaz!"
+    return "Sunucular şu an yoğun kanka (503). Lütfen birkaç saniye sonra tekrar yaz!"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Gemini altyapısıyla buradayım, fotoğraflarını da inceleyebilirim!"}
+        {"role": "assistant", "content": "Naber kanka! Ben Şimşek Zeka ⚡ Buradayım, fotoğraflarını da inceleyebilirim!"}
     ]
 
 for i, message in enumerate(st.session_state.messages):
@@ -149,14 +152,14 @@ with st.popover("➕ Araçlar", help="Fotoğraf Yükle veya Hızlı Komut Ver"):
     
     st.divider()
     if st.button("🎭 Bana Komik Bir Fıkra Anlat"):
-        st.session_state.fikra_isteği = "Bana komik bir fıkra anlat kanka!"
+        st.session_state.fikra_istegi = "Bana komik bir fıkra anlat kanka!"
 
 # Chat Input
 prompt = st.chat_input("Şimşek Zeka'ya sor veya '...çiz' de...")
 
-if "fikra_isteği" in st.session_state and st.session_state.fikra_isteği:
-    prompt = st.session_state.fikra_isteği
-    st.session_state.fikra_isteği = None
+if "fikra_istegi" in st.session_state and st.session_state.fikra_istegi:
+    prompt = st.session_state.fikra_istegi
+    st.session_state.fikra_istegi = None
 
 if prompt or yuklenen_gorsel_objesi is not None:
     girdi_metni = prompt if prompt else "Bu fotoğrafta ne görüyorsun kanka?"
@@ -168,9 +171,9 @@ if prompt or yuklenen_gorsel_objesi is not None:
     is_image_request = any(k in prompt_lower for k in ["çiz", "resim", "görsel", "tasarla"])
 
     with st.chat_message("assistant"):
-        # 1. Gemini ile Fotoğraf Analizi (Vision)
+        # 1. Fotoğraf Analizi
         if yuklenen_gorsel_objesi is not None:
-            with st.spinner("Şimşek Zeka (Gemini Vision) fotoğrafı inceliyor... 👁️⚡"):
+            with st.spinner("Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"):
                 icerik = [
                     yuklenen_gorsel_objesi,
                     f"Senin adın Şimşek Zeka. Kullanıcıya kanka diye hitap et. Fotoğrafla ilgili soru: {girdi_metni}"
@@ -200,9 +203,9 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 else:
                     st.error("Resim servisi yoğun kanka!")
 
-        # 4. Gemini Metin Sohbeti
+        # 4. Metin Sohbeti
         else:
-            with st.spinner("Şimşek Zeka (Gemini) düşünüyor... ⚡🧠"):
+            with st.spinner("Şimşek Zeka düşünüyor... ⚡🧠"):
                 system_instruction = "Senin adın Şimşek Zeka. Seni Arda Şimşek geliştirdi. Kullanıcıya samimi bir şekilde 'kanka' diye hitap et."
                 prompt_full = f"{system_instruction}\n\nKullanıcı: {girdi_metni}"
                 
