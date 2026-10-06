@@ -91,29 +91,34 @@ api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
 def gemini_cevap_al(contents_data):
-    """Google'ın aktif gemini-3.8-flash modelini kullanır, 503 yoğunluk hatası verirse pes etmeyip otomatik tekrar dener."""
+    """503 yoğunluk hatalarında kademeli bekleme yapar ve alternatif modelleri dener."""
     if not client:
         return "Gemini API Key bulunamadı kanka!"
     
-    model_adi = 'gemini-3.8-flash'
-    son_hata = ""
-    
-    # 503 yoğunluk hatalarında pes etmeden 4 kere arka arkaya dene
-    for deneme in range(4):
-        try:
-            response = client.models.generate_content(
-                model=model_adi,
-                contents=contents_data
-            )
-            if response and response.text:
-                return response.text
-        except Exception as e:
-            son_hata = str(e)
-            # Anlık yoğunluk (503 / UNAVAILABLE) veya bağlantı hatalarında 2 saniye bekle ve tekrar dene
-            time.sleep(2.5)
-            continue
-            
-    return f"Gemini Bağlantı Hatası: {son_hata}"
+    # Ana model ve yedek modeller
+    modeller = ['gemini-3.8-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash']
+    last_err = ""
+
+    for model_adi in modeller:
+        # Kademeli bekleme süreleri (1sn, 3sn, 5sn)
+        for delay in [1, 3, 5]:
+            try:
+                response = client.models.generate_content(
+                    model=model_adi,
+                    contents=contents_data
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                last_err = str(e)
+                if "503" in last_err or "UNAVAILABLE" in last_err:
+                    time.sleep(delay)
+                    continue
+                else:
+                    # 404 gibi bir hataysa bu modeli atla, sonraki yedek modele geç
+                    break
+
+    return f"Google Sunucusu Şu An Aşırı Yoğun Kanka (503). Lütfen 5 saniye sonra tekrar yaz! ({last_err[:100]})"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -194,7 +199,7 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 img_data = gorsel_indir_ve_getir(girdi_metni)
                 if img_data:
                     st.image(img_data, caption=f"İşte çizim: {girdi_metni}", use_container_width=True)
-                    st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "image"})
+                    st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "type_image"})
                 else:
                     st.error("Resim servisi yoğun kanka!")
 
