@@ -146,7 +146,7 @@ if prompt or yuklenen_gorsel_objesi is not None:
                 if client:
                     try:
                         response = client.models.generate_content(
-                            model='gemini-2.5-flash',
+                            model='gemini-3.8-flash',
                             contents=[
                                 yuklenen_gorsel_objesi,
                                 f"Senin adın Şimşek Zeka. Kullanıcıya kanka diye hitap et. Fotoğrafla ilgili soru: {girdi_metni}"
@@ -190,7 +190,7 @@ if prompt or yuklenen_gorsel_objesi is not None:
                         prompt_full = f"{system_instruction}\n\nKullanıcı: {girdi_metni}"
                         
                         response = client.models.generate_content(
-                            model='gemini-2.5-flash',
+                            model='gemini-3.8-flash',
                             contents=prompt_full
                         )
                         cevap = response.text
