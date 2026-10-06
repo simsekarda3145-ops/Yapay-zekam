@@ -200,50 +200,22 @@ if api_key:
 
 
 # =========================================================
-# GEMINI MODELLERİ
+# GEMINI MODEL
 # =========================================================
 #
-# Öncelik:
-# 1. Gemini 3.8 Flash
-# 2. Gemini 3.7 Flash
-# 3. Gemini 3.5 Flash-Lite
-# 4. Gemini 2.5 Flash
-#
-# 2.5 modelleri yeni projelerde erişim açısından
-# kısıtlanabildiği için en sona bırakıldı.
+# Ana model tek tutuldu.
+# Böylece her mesajda gereksiz model sıralaması
+# ve 2 saniyelik beklemeler yaşanmaz.
 # =========================================================
 
-GEMINI_MODELLERI = [
-    "gemini-3.8-flash",
-    "gemini-3.7-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash"
-]
+GEMINI_MODEL = "gemini-3.8-flash"
 
 
 # =========================================================
-# GEMINI CEVAP FONKSİYONU
+# SİSTEM TALİMATI
 # =========================================================
 
-def gemini_cevap_al(
-    contents_data,
-    fotograf_modu=False
-):
-
-    if not client:
-
-        return (
-            "Gemini API Key bulunamadı kanka! ⚠️\n\n"
-            "Streamlit Secrets bölümünde "
-            "`GEMINI_API_KEY` olduğundan emin ol."
-        )
-
-
-    # -----------------------------------------------------
-    # ŞİMŞEK ZEKA KİMLİĞİ
-    # -----------------------------------------------------
-
-    system_instruction = """
+SYSTEM_INSTRUCTION = """
 Senin adın Şimşek Zeka ⚡.
 
 Seni Arda Şimşek geliştirdi.
@@ -261,146 +233,127 @@ Fotoğrafta olmayan bilgileri varmış gibi söyleme.
 """
 
 
-    # -----------------------------------------------------
-    # GEMINI CONFIG
-    # -----------------------------------------------------
+# =========================================================
+# GEMINI CEVAP
+# =========================================================
+
+def gemini_cevap_al(
+    contents_data,
+    fotograf_modu=False
+):
+
+    if not client:
+
+        return (
+            "Gemini API Key bulunamadı kanka! ⚠️\n\n"
+            "Streamlit Secrets bölümünde "
+            "`GEMINI_API_KEY` olduğundan emin ol."
+        )
+
 
     config = types.GenerateContentConfig(
-        system_instruction=system_instruction
+        system_instruction=SYSTEM_INSTRUCTION,
+        temperature=0.7,
+        max_output_tokens=1024
     )
 
 
-    son_hata = ""
+    try:
 
+        # -------------------------------------------------
+        # STREAMING
+        # -------------------------------------------------
 
-    # -----------------------------------------------------
-    # MODEL SIRASI
-    # -----------------------------------------------------
-
-    for model_adi in GEMINI_MODELLERI:
-
-        for deneme in range(2):
-
-            try:
-
-                response = client.models.generate_content(
-                    model=model_adi,
-                    contents=contents_data,
-                    config=config
-                )
-
-
-                # -----------------------------------------
-                # BAŞARILI CEVAP
-                # -----------------------------------------
-
-                if response and response.text:
-
-                    return response.text.strip()
-
-
-                son_hata = (
-                    f"{model_adi}: Boş cevap döndü."
-                )
-
-
-            except Exception as e:
-
-                hata = str(e)
-                hata_lower = hata.lower()
-
-                son_hata = (
-                    f"{model_adi}: "
-                    f"{type(e).__name__}: "
-                    f"{hata}"
-                )
-
-
-                # -----------------------------------------
-                # GEÇİCİ HATALAR
-                # -----------------------------------------
-
-                gecici_hatalar = [
-                    "429",
-                    "503",
-                    "unavailable",
-                    "resource exhausted",
-                    "timeout",
-                    "deadline",
-                    "temporarily unavailable",
-                    "internal server error"
-                ]
-
-                if any(
-                    kelime in hata_lower
-                    for kelime in gecici_hatalar
-                ):
-
-                    if deneme == 0:
-
-                        time.sleep(2)
-
-                        continue
-
-                    else:
-
-                        break
-
-
-                # -----------------------------------------
-                # MODEL YOK / ERİŞİLEMİYOR
-                # -----------------------------------------
-
-                if (
-                    "404" in hata_lower
-                    or "not found" in hata_lower
-                    or "does not exist" in hata_lower
-                ):
-
-                    break
-
-
-                # -----------------------------------------
-                # API KEY / YETKİ
-                # -----------------------------------------
-
-                if (
-                    "403" in hata_lower
-                    or "401" in hata_lower
-                    or "permission" in hata_lower
-                    or "authentication" in hata_lower
-                    or "api key" in hata_lower
-                ):
-
-                    return (
-                        "Gemini API erişiminde sorun var kanka. ⚠️\n\n"
-                        "API anahtarını ve Google AI API erişimini "
-                        "kontrol et.\n\n"
-                        f"Teknik hata:\n{son_hata}"
-                    )
-
-
-                # -----------------------------------------
-                # DİĞER HATALAR
-                # -----------------------------------------
-
-                break
-
-
-    # -----------------------------------------------------
-    # HİÇBİR MODEL ÇALIŞMAZSA
-    # -----------------------------------------------------
-
-    return (
-        "Şu an Gemini'ye bağlanamadım kanka. ⚡\n\n"
-        "Denenen modeller:\n"
-        + "\n".join(
-            f"• {model}"
-            for model in GEMINI_MODELLERI
+        response_stream = (
+            client.models.generate_content_stream(
+                model=GEMINI_MODEL,
+                contents=contents_data,
+                config=config
+            )
         )
-        + "\n\n"
-        f"Teknik hata:\n{son_hata}"
-    )
+
+        cevap_parcalari = []
+
+        for chunk in response_stream:
+
+            if chunk.text:
+
+                cevap_parcalari.append(
+                    chunk.text
+                )
+
+        cevap = "".join(
+            cevap_parcalari
+        ).strip()
+
+
+        if cevap:
+
+            return cevap
+
+
+        return (
+            "Kanka Gemini boş cevap döndürdü. ⚡"
+        )
+
+
+    except Exception as e:
+
+        hata = str(e)
+        hata_lower = hata.lower()
+
+
+        # -------------------------------------------------
+        # GEÇİCİ HATA
+        # -------------------------------------------------
+
+        if any(
+            kelime in hata_lower
+            for kelime in [
+                "429",
+                "503",
+                "unavailable",
+                "resource exhausted",
+                "timeout",
+                "deadline",
+                "temporarily unavailable",
+                "internal server error"
+            ]
+        ):
+
+            return (
+                "Gemini şu an biraz yoğun kanka. ⚡\n\n"
+                "Birkaç saniye sonra tekrar dene."
+            )
+
+
+        # -------------------------------------------------
+        # YETKİ / API KEY
+        # -------------------------------------------------
+
+        if (
+            "403" in hata_lower
+            or "401" in hata_lower
+            or "permission" in hata_lower
+            or "authentication" in hata_lower
+            or "api key" in hata_lower
+        ):
+
+            return (
+                "Gemini API erişiminde sorun var kanka. ⚠️\n\n"
+                "API anahtarını ve Google AI API erişimini "
+                "kontrol et."
+            )
+
+
+        # -------------------------------------------------
+        # DİĞER HATA
+        # -------------------------------------------------
+
+        return (
+            "Şimşek Zeka'da bir bağlantı sorunu oldu kanka. ⚡\n\n"
+            f"Teknik hata:\n{type(e).__name__}: {hata}"
+        )
 
 
 # =========================================================
@@ -444,7 +397,6 @@ for i, message in enumerate(
             content = message["content"]
 
 
-            # Dosya yolu
             if (
                 isinstance(content, str)
                 and os.path.exists(content)
@@ -456,8 +408,6 @@ for i, message in enumerate(
                     use_container_width=True
                 )
 
-
-            # PIL Image
             else:
 
                 st.image(
@@ -486,10 +436,7 @@ for i, message in enumerate(
 
             if (
                 message["role"] == "assistant"
-                and isinstance(
-                    content,
-                    str
-                )
+                and isinstance(content, str)
             ):
 
                 if st.button(
@@ -525,10 +472,6 @@ with st.popover(
         "### 🛠️ Şimşek Zeka Araçları"
     )
 
-
-    # -----------------------------------------------------
-    # FOTOĞRAF YÜKLEME
-    # -----------------------------------------------------
 
     yuklenen_dosya = st.file_uploader(
         "Bir görsel seç veya çek",
@@ -568,10 +511,6 @@ with st.popover(
 
     st.divider()
 
-
-    # -----------------------------------------------------
-    # FIKRA
-    # -----------------------------------------------------
 
     if st.button(
         "🎭 Bana Komik Bir Fıkra Anlat"
@@ -827,4 +766,4 @@ if (
                         "content": cevap,
                         "type": "text"
                     }
-        )
+)
