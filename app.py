@@ -6,17 +6,16 @@ import asyncio
 import base64
 from io import BytesIO
 
-import streamlit as st
 import requests
+import streamlit as st
 from PIL import Image
 from google import genai
-from google.genai import types
 import edge_tts
 
 
-# =========================================================
+# ==================================================
 # SAYFA AYARLARI
-# =========================================================
+# ==================================================
 
 st.set_page_config(
     page_title="Şimşek Zeka ⚡",
@@ -25,9 +24,9 @@ st.set_page_config(
 )
 
 
-# =========================================================
+# ==================================================
 # CSS
-# =========================================================
+# ==================================================
 
 st.markdown("""
 <style>
@@ -78,17 +77,17 @@ div[data-testid="stPopover"] > button {
 """, unsafe_allow_html=True)
 
 
-# =========================================================
+# ==================================================
 # BAŞLIK
-# =========================================================
+# ==================================================
 
 st.title("⚡ Şimşek Zeka - Işık Hızında Yapay Zeka")
 st.caption("Şimşek Zeka AI Altyapısı ile Güçlendirildi 🚀")
 
 
-# =========================================================
+# ==================================================
 # SES SİSTEMİ
-# =========================================================
+# ==================================================
 
 async def generate_edge_tts(text):
 
@@ -124,17 +123,19 @@ def metni_sese_cevir(text):
         ).decode("utf-8")
 
         return (
-            '<audio autoplay="true" '
+            '<audio controls autoplay '
+            'style="width:100%;" '
             f'src="data:audio/mp3;base64,{b64_audio}">'
+            '</audio>'
         )
 
     except Exception:
         return None
 
 
-# =========================================================
+# ==================================================
 # GÖRSEL OLUŞTURMA
-# =========================================================
+# ==================================================
 
 def gorsel_indir_ve_getir(prompt_text):
 
@@ -176,70 +177,82 @@ def gorsel_indir_ve_getir(prompt_text):
         return None
 
 
-# =========================================================
-# GEMINI API
-# =========================================================
+# ==================================================
+# GEMINI BAĞLANTISI
+# ==================================================
 
 api_key = (
     st.secrets.get("GEMINI_API_KEY")
     or os.getenv("GEMINI_API_KEY")
 )
 
-client = None
-
 if api_key:
 
-    try:
+    client = genai.Client(
+        api_key=api_key
+    )
 
-        client = genai.Client(
-            api_key=api_key
-        )
+else:
 
-    except Exception:
-        client = None
-
-
-# =========================================================
-# GEMINI MODEL
-# =========================================================
-#
-# Ana model tek tutuldu.
-# Böylece her mesajda gereksiz model sıralaması
-# ve 2 saniyelik beklemeler yaşanmaz.
-# =========================================================
-
-GEMINI_MODEL = "gemini-3.8-flash"
+    client = None
 
 
-# =========================================================
-# SİSTEM TALİMATI
-# =========================================================
+# ==================================================
+# GEMINI MODEL LİSTESİ
+# ==================================================
 
-SYSTEM_INSTRUCTION = """
-Senin adın Şimşek Zeka ⚡.
-
-Seni Arda Şimşek geliştirdi.
-
-Kullanıcıyla Türkçe konuş.
-Samimi ve doğal ol.
-Uygun olduğunda kullanıcıya "kanka" diye hitap et.
-
-Sorulara doğru, anlaşılır ve faydalı cevaplar ver.
-Gereksiz yere aşırı uzun cevaplar verme.
-
-Eğer kullanıcı fotoğraf gönderirse,
-fotoğrafı dikkatli şekilde analiz et.
-Fotoğrafta olmayan bilgileri varmış gibi söyleme.
-"""
+GEMINI_MODELLERI = [
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite"
+]
 
 
-# =========================================================
-# GEMINI CEVAP
-# =========================================================
+# ==================================================
+# SOHBET GEÇMİŞİ OLUŞTURMA
+# ==================================================
+
+def sohbet_gecmisini_hazirla():
+
+    if "messages" not in st.session_state:
+        return ""
+
+    gecmis = []
+
+    # Son 12 mesajı kullan
+    son_mesajlar = st.session_state.messages[-12:]
+
+    for mesaj in son_mesajlar:
+
+        if mesaj.get("type") == "image":
+            continue
+
+        role = mesaj.get("role")
+        content = mesaj.get("content")
+
+        if not isinstance(content, str):
+            continue
+
+        if role == "user":
+            gecmis.append(
+                f"Kullanıcı: {content}"
+            )
+
+        elif role == "assistant":
+            gecmis.append(
+                f"Şimşek Zeka: {content}"
+            )
+
+    return "\n".join(gecmis)
+
+
+# ==================================================
+# GEMINI CEVAP SİSTEMİ
+# ==================================================
 
 def gemini_cevap_al(
-    contents_data,
-    fotograf_modu=False
+    kullanici_icerigi,
+    fotograf=None
 ):
 
     if not client:
@@ -251,114 +264,204 @@ def gemini_cevap_al(
         )
 
 
-    config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_INSTRUCTION,
-        temperature=0.7,
-        max_output_tokens=1024
+    # ----------------------------------------------
+    # ŞİMŞEK ZEKA KARAKTERİ
+    # ----------------------------------------------
+
+    sistem = """
+Senin adın Şimşek Zeka ⚡.
+
+Seni Arda Şimşek geliştirdi.
+
+Kullanıcıyla Türkçe konuş.
+Samimi ve doğal ol.
+Gerektiğinde kullanıcıya "kanka" diye hitap et.
+Sorulara doğru ve anlaşılır cevap ver.
+Gereksiz yere çok uzun cevaplar verme.
+
+Fotoğraf gönderildiyse fotoğrafı dikkatlice incele
+ve yalnızca görüntüden çıkarılabilecek bilgiler üzerinden
+cevap ver.
+"""
+
+
+    # ----------------------------------------------
+    # SOHBET GEÇMİŞİ
+    # ----------------------------------------------
+
+    gecmis = sohbet_gecmisini_hazirla()
+
+
+    # ----------------------------------------------
+    # NORMAL METİN
+    # ----------------------------------------------
+
+    if fotograf is None:
+
+        tam_prompt = f"""
+{sistem}
+
+Önceki sohbet:
+{gecmis}
+
+Kullanıcının yeni mesajı:
+{kullanici_icerigi}
+"""
+
+        icerik = tam_prompt
+
+
+    # ----------------------------------------------
+    # FOTOĞRAF
+    # ----------------------------------------------
+
+    else:
+
+        tam_prompt = f"""
+{sistem}
+
+Kullanıcının fotoğrafla ilgili sorusu:
+{kullanici_icerigi}
+"""
+
+        icerik = [
+            fotograf,
+            tam_prompt
+        ]
+
+
+    son_hata = ""
+
+
+    # ----------------------------------------------
+    # MODELLERİ DENE
+    # ----------------------------------------------
+
+    for model_adi in GEMINI_MODELLERI:
+
+        # Her model için en fazla 2 deneme
+        for deneme in range(2):
+
+            try:
+
+                response = client.models.generate_content(
+                    model=model_adi,
+                    contents=icerik
+                )
+
+
+                if response and response.text:
+
+                    return response.text.strip()
+
+
+                son_hata = (
+                    f"{model_adi}: Gemini boş cevap döndürdü."
+                )
+
+
+            except Exception as e:
+
+                hata = str(e)
+                hata_lower = hata.lower()
+
+                son_hata = (
+                    f"{model_adi}: "
+                    f"{type(e).__name__}: "
+                    f"{hata}"
+                )
+
+
+                # ----------------------------------
+                # GEÇİCİ HATALAR
+                # ----------------------------------
+
+                gecici_hatalar = [
+                    "429",
+                    "503",
+                    "unavailable",
+                    "resource exhausted",
+                    "timeout",
+                    "deadline",
+                    "temporarily unavailable",
+                    "internal server error"
+                ]
+
+                gecici_mi = any(
+                    kelime in hata_lower
+                    for kelime in gecici_hatalar
+                )
+
+
+                if gecici_mi:
+
+                    if deneme == 0:
+
+                        time.sleep(2)
+
+                        continue
+
+
+                # ----------------------------------
+                # MODEL BULUNAMADI
+                # ----------------------------------
+
+                model_hatasi = (
+                    "404" in hata_lower
+                    or "not found" in hata_lower
+                    or "does not exist" in hata_lower
+                )
+
+                if model_hatasi:
+
+                    # Bu modeli bırak,
+                    # sıradaki modele geç.
+                    break
+
+
+                # ----------------------------------
+                # YETKİ / API KEY
+                # ----------------------------------
+
+                if (
+                    "403" in hata_lower
+                    or "permission" in hata_lower
+                    or "api key" in hata_lower
+                    or "authentication" in hata_lower
+                ):
+
+                    return (
+                        "Gemini API erişiminde sorun var kanka. ⚠️\n\n"
+                        f"Teknik hata:\n{son_hata}"
+                    )
+
+
+                # ----------------------------------
+                # DİĞER HATALAR
+                # ----------------------------------
+
+                break
+
+
+    # ==================================================
+    # HİÇBİR MODEL ÇALIŞMAZSA
+    # ==================================================
+
+    return (
+        "Gemini'ye şu anda bağlanamadım kanka. ⚡\n\n"
+        "Denediğim modeller:\n"
+        + "\n".join(
+            f"• {model}"
+            for model in GEMINI_MODELLERI
+        )
+        + "\n\n"
+        f"Son teknik hata:\n{son_hata}"
     )
 
 
-    try:
-
-        # -------------------------------------------------
-        # STREAMING
-        # -------------------------------------------------
-
-        response_stream = (
-            client.models.generate_content_stream(
-                model=GEMINI_MODEL,
-                contents=contents_data,
-                config=config
-            )
-        )
-
-        cevap_parcalari = []
-
-        for chunk in response_stream:
-
-            if chunk.text:
-
-                cevap_parcalari.append(
-                    chunk.text
-                )
-
-        cevap = "".join(
-            cevap_parcalari
-        ).strip()
-
-
-        if cevap:
-
-            return cevap
-
-
-        return (
-            "Kanka Gemini boş cevap döndürdü. ⚡"
-        )
-
-
-    except Exception as e:
-
-        hata = str(e)
-        hata_lower = hata.lower()
-
-
-        # -------------------------------------------------
-        # GEÇİCİ HATA
-        # -------------------------------------------------
-
-        if any(
-            kelime in hata_lower
-            for kelime in [
-                "429",
-                "503",
-                "unavailable",
-                "resource exhausted",
-                "timeout",
-                "deadline",
-                "temporarily unavailable",
-                "internal server error"
-            ]
-        ):
-
-            return (
-                "Gemini şu an biraz yoğun kanka. ⚡\n\n"
-                "Birkaç saniye sonra tekrar dene."
-            )
-
-
-        # -------------------------------------------------
-        # YETKİ / API KEY
-        # -------------------------------------------------
-
-        if (
-            "403" in hata_lower
-            or "401" in hata_lower
-            or "permission" in hata_lower
-            or "authentication" in hata_lower
-            or "api key" in hata_lower
-        ):
-
-            return (
-                "Gemini API erişiminde sorun var kanka. ⚠️\n\n"
-                "API anahtarını ve Google AI API erişimini "
-                "kontrol et."
-            )
-
-
-        # -------------------------------------------------
-        # DİĞER HATA
-        # -------------------------------------------------
-
-        return (
-            "Şimşek Zeka'da bir bağlantı sorunu oldu kanka. ⚡\n\n"
-            f"Teknik hata:\n{type(e).__name__}: {hata}"
-        )
-
-
-# =========================================================
+# ==================================================
 # MESAJ GEÇMİŞİ
-# =========================================================
+# ==================================================
 
 if "messages" not in st.session_state:
 
@@ -368,17 +471,17 @@ if "messages" not in st.session_state:
             "role": "assistant",
             "content": (
                 "Naber kanka! Ben Şimşek Zeka ⚡ "
-                "Buradayım, fotoğraflarını da "
-                "inceleyebilirim!"
+                "Buradayım. Bana istediğini sorabilir, "
+                "fotoğraf gönderebilir veya çizim yaptırabilirsin!"
             )
         }
 
     ]
 
 
-# =========================================================
+# ==================================================
 # ESKİ MESAJLARI GÖSTER
-# =========================================================
+# ==================================================
 
 for i, message in enumerate(
     st.session_state.messages
@@ -388,15 +491,16 @@ for i, message in enumerate(
         message["role"]
     ):
 
-        # -------------------------------------------------
-        # GÖRSEL
-        # -------------------------------------------------
+        # ------------------------------------------
+        # GÖRSEL MESAJ
+        # ------------------------------------------
 
         if message.get("type") == "image":
 
-            content = message["content"]
+            content = message.get("content")
 
 
+            # Dosya yoluysa
             if (
                 isinstance(content, str)
                 and os.path.exists(content)
@@ -408,7 +512,9 @@ for i, message in enumerate(
                     use_container_width=True
                 )
 
-            else:
+
+            # PIL görseliyse
+            elif content is not None:
 
                 st.image(
                     content,
@@ -417,26 +523,28 @@ for i, message in enumerate(
                 )
 
 
-        # -------------------------------------------------
-        # METİN
-        # -------------------------------------------------
+        # ------------------------------------------
+        # METİN MESAJI
+        # ------------------------------------------
 
         else:
 
-            content = message["content"]
-
-            st.markdown(
-                content
+            content = message.get(
+                "content",
+                ""
             )
 
+            st.markdown(content)
 
-            # -------------------------------------------------
-            # SESLİ DİNLE
-            # -------------------------------------------------
 
+            # Ses butonu
             if (
                 message["role"] == "assistant"
-                and isinstance(content, str)
+                and isinstance(
+                    content,
+                    str
+                )
+                and content.strip()
             ):
 
                 if st.button(
@@ -452,13 +560,13 @@ for i, message in enumerate(
 
                         st.components.v1.html(
                             audio_html,
-                            height=0
+                            height=55
                         )
 
 
-# =========================================================
+# ==================================================
 # ARAÇLAR
-# =========================================================
+# ==================================================
 
 yuklenen_gorsel_objesi = None
 
@@ -488,6 +596,8 @@ with st.popover(
 
         try:
 
+            # .copy() önemli:
+            # uploaded_file kapanırsa görüntü bozulmasın.
             yuklenen_gorsel_objesi = Image.open(
                 yuklenen_dosya
             ).copy()
@@ -499,7 +609,7 @@ with st.popover(
             )
 
             st.success(
-                "Görsel yüklendi kanka!"
+                "Görsel yüklendi kanka! ⚡"
             )
 
         except Exception:
@@ -521,19 +631,16 @@ with st.popover(
         )
 
 
-# =========================================================
+# ==================================================
 # CHAT INPUT
-# =========================================================
+# ==================================================
 
 prompt = st.chat_input(
     "Şimşek Zeka'ya sor veya '...çiz' de..."
 )
 
 
-# =========================================================
-# FIKRA İSTEĞİ
-# =========================================================
-
+# Fıkra isteği
 if (
     "fikra_istegi"
     in st.session_state
@@ -545,9 +652,9 @@ if (
     st.session_state.fikra_istegi = None
 
 
-# =========================================================
+# ==================================================
 # MESAJ İŞLEME
-# =========================================================
+# ==================================================
 
 if (
     prompt
@@ -562,9 +669,9 @@ if (
     )
 
 
-    # -----------------------------------------------------
+    # ----------------------------------------------
     # KULLANICI MESAJI
-    # -----------------------------------------------------
+    # ----------------------------------------------
 
     st.chat_message(
         "user"
@@ -585,17 +692,19 @@ if (
     prompt_lower = girdi_metni.lower()
 
 
-    # -----------------------------------------------------
-    # GÖRSEL İSTEĞİ
-    # -----------------------------------------------------
+    # ----------------------------------------------
+    # GÖRSEL İSTEĞİ Mİ?
+    # ----------------------------------------------
 
     is_image_request = any(
         kelime in prompt_lower
         for kelime in [
             "çiz",
-            "resim",
-            "görsel",
-            "tasarla"
+            "resim çiz",
+            "görsel oluştur",
+            "görsel yap",
+            "tasarla",
+            "resim yap"
         ]
     )
 
@@ -605,9 +714,9 @@ if (
     ):
 
 
-        # =================================================
+        # ==================================================
         # 1. FOTOĞRAF ANALİZİ
-        # =================================================
+        # ==================================================
 
         if yuklenen_gorsel_objesi is not None:
 
@@ -615,18 +724,9 @@ if (
                 "Şimşek Zeka fotoğrafı inceliyor... 👁️⚡"
             ):
 
-                icerik = [
-                    yuklenen_gorsel_objesi,
-                    (
-                        "Fotoğrafı analiz et. "
-                        f"Kullanıcının sorusu: {girdi_metni}"
-                    )
-                ]
-
-
                 cevap = gemini_cevap_al(
-                    icerik,
-                    fotograf_modu=True
+                    girdi_metni,
+                    fotograf=yuklenen_gorsel_objesi
                 )
 
 
@@ -644,9 +744,9 @@ if (
                 )
 
 
-        # =================================================
+        # ==================================================
         # 2. PEKMEZ
-        # =================================================
+        # ==================================================
 
         elif "pekmez" in prompt_lower:
 
@@ -695,9 +795,9 @@ if (
                 )
 
 
-        # =================================================
+        # ==================================================
         # 3. GÖRSEL OLUŞTURMA
-        # =================================================
+        # ==================================================
 
         elif is_image_request:
 
@@ -717,8 +817,7 @@ if (
                     st.image(
                         img_data,
                         caption=(
-                            f"İşte çizim: "
-                            f"{girdi_metni}"
+                            "İşte çizim 🎨⚡"
                         ),
                         use_container_width=True
                     )
@@ -736,13 +835,14 @@ if (
                 else:
 
                     st.error(
-                        "Resim servisi şu an yoğun kanka!"
+                        "Resim servisi şu an yoğun kanka! "
+                        "Birkaç saniye sonra tekrar dene."
                     )
 
 
-        # =================================================
-        # 4. NORMAL SOHBET
-        # =================================================
+        # ==================================================
+        # 4. NORMAL GEMINI SOHBETİ
+        # ==================================================
 
         else:
 
