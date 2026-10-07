@@ -202,16 +202,6 @@ if api_key:
 # =========================================================
 # GEMINI MODELLERİ
 # =========================================================
-#
-# Öncelik:
-# 1. Gemini 3.8 Flash
-# 2. Gemini 3.7 Flash
-# 3. Gemini 3.5 Flash-Lite
-# 4. Gemini 2.5 Flash
-#
-# 2.5 modelleri yeni projelerde erişim açısından
-# kısıtlanabildiği için en sona bırakıldı.
-# =========================================================
 
 GEMINI_MODELLERI = [
     "gemini-3.8-flash",
@@ -401,6 +391,26 @@ Fotoğrafta olmayan bilgileri varmış gibi söyleme.
         + "\n\n"
         f"Teknik hata:\n{son_hata}"
     )
+
+
+# =========================================================
+# YAZMA HIZI AYARLAYICI (KELİME / CÜMLE HIZI)
+# =========================================================
+
+def yavas_yazdir(metin, yazma_hizi=0.03):
+
+    """
+    yazma_hizi: Kelimelerin ekrana gelme hızı (Saniye cinsinden).
+    Örn: 0.01 çok hızlı, 0.03 normal akıcı, 0.08 daha yavaş.
+    """
+
+    kelimeler = metin.split(" ")
+
+    for index, kelime in enumerate(kelimeler):
+
+        yield kelime + (" " if index != len(kelimeler) - 1 else "")
+
+        time.sleep(yazma_hizi)
 
 
 # =========================================================
@@ -691,8 +701,8 @@ if (
                 )
 
 
-                st.markdown(
-                    cevap
+                cevap_yazisi = st.write_stream(
+                    yavas_yazdir(cevap, yazma_hizi=0.03)
                 )
 
 
@@ -742,8 +752,8 @@ if (
                 )
 
 
-                st.markdown(
-                    cevap
+                cevap_yazisi = st.write_stream(
+                    yavas_yazdir(cevap, yazma_hizi=0.03)
                 )
 
 
@@ -816,8 +826,8 @@ if (
                 )
 
 
-                st.markdown(
-                    cevap
+                cevap_yazisi = st.write_stream(
+                    yavas_yazdir(cevap, yazma_hizi=0.03)
                 )
 
 
@@ -827,4 +837,4 @@ if (
                         "content": cevap,
                         "type": "text"
                     }
-        )
+                )
