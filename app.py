@@ -202,16 +202,6 @@ if api_key:
 # =========================================================
 # GEMINI MODELLERİ
 # =========================================================
-#
-# Öncelik:
-# 1. Gemini 3.8 Flash
-# 2. Gemini 3.7 Flash
-# 3. Gemini 3.5 Flash-Lite
-# 4. Gemini 2.5 Flash
-#
-# 2.5 modelleri yeni projelerde erişim açısından
-# kısıtlanabildiği için en sona bırakıldı.
-# =========================================================
 
 GEMINI_MODELLERI = [
     "gemini-3.8-flash",
@@ -401,6 +391,41 @@ Fotoğrafta olmayan bilgileri varmış gibi söyleme.
         + "\n\n"
         f"Teknik hata:\n{son_hata}"
     )
+
+
+# =========================================================
+# YAZMA ANIMASYONU (TARAYICI TABANLI - HIZLI)
+# =========================================================
+
+def yavas_yazdir_js(metin, ms_hiz=20):
+
+    clean_text = metin.replace("`", "'").replace("\n", "\\n")
+
+    js_code = f"""
+    <div id="typewriter_text" style="color: #ffffff; font-family: sans-serif; line-height: 1.5;"></div>
+    <script>
+        var text = `{clean_text}`;
+        var speed = {ms_hiz};
+        var i = 0;
+        var elem = document.getElementById("typewriter_text");
+
+        function typeWriter() {{
+            if (i < text.length) {{
+                if(text.substring(i, i+2) === "\\n") {{
+                    elem.innerHTML += "<br>";
+                    i += 2;
+                }} else {{
+                    elem.innerHTML += text.charAt(i);
+                    i++;
+                }}
+                setTimeout(typeWriter, speed);
+            }}
+        }}
+        typeWriter();
+    </script>
+    """
+
+    st.components.v1.html(js_code, height=120, scrolling=True)
 
 
 # =========================================================
@@ -691,9 +716,7 @@ if (
                 )
 
 
-                st.markdown(
-                    cevap
-                )
+                st.markdown(cevap)
 
 
                 st.session_state.messages.append(
@@ -742,9 +765,7 @@ if (
                 )
 
 
-                st.markdown(
-                    cevap
-                )
+                st.markdown(cevap)
 
 
                 st.session_state.messages.append(
@@ -816,9 +837,7 @@ if (
                 )
 
 
-                st.markdown(
-                    cevap
-                )
+                st.markdown(cevap)
 
 
                 st.session_state.messages.append(
@@ -827,4 +846,4 @@ if (
                         "content": cevap,
                         "type": "text"
                     }
-)
+                )
